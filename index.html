@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QnA Hub - File Parser & Viewer</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- html2pdf for robust PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin></script>
+    
+    <!-- Tailwind Config for Dynamic Themes -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        themeBg: 'var(--bg)',
+                        themeCard: 'var(--card)',
+                        themeText: 'var(--text)',
+                        themePrimary: 'var(--primary)',
+                        themeBorder: 'var(--border)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base styles mapped to CSS variables */
+        :root {
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #1f2937;
+            --primary: #3b82f6;
+            --border: #e5e7eb;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        .dropdown-scroll { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // =========================================================================
+        // 📁 CONFIGURATION: ADD YOUR FILES HERE
+        // =========================================================================
+        // 1. Put your files in the exact same folder as this HTML file.
+        // 2. Add their exact names to this list.
+        const AVAILABLE_FILES = [
+            "Infections-Raihana Med ريحانة الطdب.txt"
+            // Example: "Another File.txt",
+            // Example: "Chapter 2 Questions.csv"
+        ];
+        // =========================================================================
+
+        // --- SVGs ---
+        const Icons = {
+            Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+            Copy: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
+            FileText: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
+            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+            Eye: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
+            EyeOff: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>,
+            Palette: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>,
+            Tag: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>,
+            Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
+            Loader: () => <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>,
+            Minimize: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>,
+            Star: ({filled}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={filled ? "text-yellow-400" : "opacity-50 hover:opacity-100 transition-opacity"}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>,
+            Circle: () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40 hover:opacity-100 transition-opacity"><circle cx="12" cy="12" r="10"></circle></svg>,
+            CheckCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01" stroke="white" strokeWidth="3"></polyline></svg>,
+            ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>,
+            ChevronUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>,
+            List: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>,
+            Filter: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
+            Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        };
+
+        // --- Themes Configuration ---
+        const THEMES = [
+            { name: 'Light', vars: { '--bg': '#f3f4f6', '--card': '#ffffff', '--text': '#1f2937', '--primary': '#3b82f6', '--border': '#e5e7eb' } },
+            { name: 'Dark', vars: { '--bg': '#111827', '--card': '#1f2937', '--text': '#f9fafb', '--primary': '#60a5fa', '--border': '#374151' } },
+            { name: 'Sepia', vars: { '--bg': '#f4ecd8', '--card': '#fffbf0', '--text': '#433422', '--primary': '#d97706', '--border': '#d6c5a5' } }
+            // Additional themes removed for brevity, but dynamic custom theme still fully works!
+        ];
+
+        // --- Main App Component ---
+        function App() {
+            const [activeFile, setActiveFile] = useState(AVAILABLE_FILES[0] || "");
+            const [questions, setQuestions] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [fetchError, setFetchError] = useState(null);
+            
+            // Interaction State
+            const [favoriteIds, setFavoriteIds] = useState(new Set());
+            const [completedIds, setCompletedIds] = useState(new Set());
+            const [collapsedIds, setCollapsedIds] = useState(new Set());
+            
+            // View & Filter State
+            const [searchQuery, setSearchQuery] = useState("");
+            const [activeTab, setActiveTab] = useState('All'); 
+            const [isExporting, setIsExporting] = useState(false);
+            
+            // Lesson Filtering
+            const [availableLessons, setAvailableLessons] = useState([]);
+            const [selectedLessons, setSelectedLessons] = useState(new Set());
+            const [isLessonDropdownOpen, setIsLessonDropdownOpen] = useState(false);
+
+            const [displaySettings, setDisplaySettings] = useState({
+                showOptions: true,
+                showAnswer: true,
+                showExplanation: true,
+                showTags: true,
+                compactMode: false
+            });
+
+            const [selectedTheme, setSelectedTheme] = useState('Light');
+            const [customTheme, setCustomTheme] = useState({
+                '--bg': '#ffffff', '--card': '#f3f4f6', '--text': '#000000', '--primary': '#10b981', '--border': '#d1d5db'
+            });
+            const [showCustomThemeEditor, setShowCustomThemeEditor] = useState(false);
+            const [toastMessage, setToastMessage] = useState(null);
+
+            const getCurrentThemeVars = () => {
+                if (selectedTheme === 'Custom') return customTheme;
+                const theme = THEMES.find(t => t.name === selectedTheme);
+                return theme ? theme.vars : THEMES[0].vars;
+            };
+
+            useEffect(() => {
+                const root = document.documentElement;
+                const activeVars = getCurrentThemeVars();
+                Object.entries(activeVars).forEach(([key, val]) => {
+                    root.style.setProperty(key, val);
+                });
+            }, [selectedTheme, customTheme]);
+
+            const showToast = (msg) => {
+                setToastMessage(msg);
+                setTimeout(() => setToastMessage(null), 3000);
+            };
+
+            // --- Pattern Recognition Parser ---
+            const parseTextData = (text) => {
+                const lines = text.split('\n');
+                const parsed = [];
+                let idCounter = 1;
+                const uniqueLessons = new Set();
+
+                let separator = '\t';
+                const sepMatch = text.match(/#separator:(.+)/);
+                if (sepMatch) {
+                    if (sepMatch[1].trim() === 'tab') separator = '\t';
+                    else if (sepMatch[1].trim() === 'comma') separator = ',';
+                    else separator = sepMatch[1].trim();
+                }
+
+                let explicitTagCol = -1;
+                const tagColMatch = text.match(/#tags column:(\d+)/i);
+                if (tagColMatch) explicitTagCol = parseInt(tagColMatch[1], 10) - 1;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (!line.trim() || line.startsWith('#')) continue;
+                    
+                    const cols = line.split(separator);
+                    if (cols.length < 2) continue;
+
+                    let lesson = "General";
+                    let qText = cols[0].trim();
+                    let optStartIndex = 1;
+
+                    // PATTERN RECOGNITION: Check if first column is actually a lesson/chapter name
+                    // Based on "MA MCQ Infections 1064", "Page 119-135", "MCQ...", "Tropical...", or "::"
+                    const col0 = cols[0].trim();
+                    if (cols.length >= 3 && (
+                        col0.includes('::') || 
+                        /page\s*\d+/i.test(col0) || 
+                        /mcq/i.test(col0) || 
+                        /tropical/i.test(col0) ||
+                        /infections/i.test(col0)
+                    )) {
+                        lesson = col0;
+                        qText = cols[1] ? cols[1].trim() : "Unknown Question";
+                        optStartIndex = 2; // Shift options start since col 0 is lesson and col 1 is question
+                    }
+
+                    uniqueLessons.add(lesson);
+
+                    let options = [];
+                    let answerKey = '';
+                    let answerText = '';
+                    let explanation = '';
+                    let tag = '';
+
+                    if (explicitTagCol !== -1 && cols.length > explicitTagCol && cols[explicitTagCol].trim()) {
+                        tag = cols[explicitTagCol].trim();
+                        cols[explicitTagCol] = '';
+                    }
+
+                    // Find answer index heuristically (A, B, C, D, E)
+                    let ansIndex = -1;
+                    for (let c = optStartIndex; c < cols.length; c++) {
+                        const val = cols[c].trim().toUpperCase();
+                        if (/^[A-E]$/.test(val)) {
+                            ansIndex = c;
+                            break;
+                        }
+                    }
+
+                    if (ansIndex !== -1) {
+                        for(let c = optStartIndex; c < ansIndex; c++) {
+                            if (cols[c].trim()) options.push(cols[c].trim());
+                        }
+                        
+                        answerKey = cols[ansIndex].trim();
+                        answerText = cols[ansIndex + 1] ? cols[ansIndex + 1].trim() : '';
+                        let remaining = cols.slice(ansIndex + 2).map(c => c.trim());
+                        
+                        if (!tag) {
+                            let lastNonEmptyIdx = -1;
+                            for (let k = remaining.length - 1; k >= 0; k--) {
+                                if (remaining[k]) {
+                                    lastNonEmptyIdx = k;
+                                    break;
+                                }
+                            }
+                            if (lastNonEmptyIdx !== -1) {
+                                tag = remaining[lastNonEmptyIdx];
+                                remaining[lastNonEmptyIdx] = ''; 
+                            }
+                        }
+
+                        let explParts = remaining.filter(c => c);
+                        if (explParts.length > 0) explanation = explParts.join(" | ");
+                    } else {
+                        // Fallback
+                        options = cols.slice(optStartIndex, cols.length - 2).filter(c => c.trim());
+                        answerText = cols[cols.length - 2] ? cols[cols.length - 2].trim() : '';
+                        if (!tag) {
+                            tag = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
+                        } else {
+                            explanation = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
+                        }
+                    }
+
+                    parsed.push({
+                        id: idCounter++,
+                        lesson: lesson,
+                        question: qText,
+                        options: options,
+                        answerKey: answerKey,
+                        answerText: answerText,
+                        explanation: explanation,
+                        tag: tag
+                    });
+                }
+                
+                return { parsed, lessons: Array.from(uniqueLessons) };
+            };
+
+            // --- Auto Fetch File ---
+            useEffect(() => {
+                if (!activeFile) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                setIsLoading(true);
+                setFetchError(null);
+                
+                fetch(activeFile)
+                    .then(response => {
+                        if (!response.ok) throw new Error("HTTP " + response.status);
+                        return response.text();
+                    })
+                    .then(text => {
+                        const { parsed, lessons } = parseTextData(text);
+                        setQuestions(parsed);
+                        setAvailableLessons(lessons);
+                        
+                        // Reset interactions for new file
+                        setFavoriteIds(new Set());
+                        setCompletedIds(new Set());
+                        setCollapsedIds(new Set());
+                        setSelectedLessons(new Set());
+                        setSearchQuery("");
+                        
+                        setIsLoading(false);
+                        showToast(`Loaded ${parsed.length} questions from ${activeFile}`);
+                    })
+                    .catch(error => {
+                        console.error("Fetch Error:", error);
+                        setFetchError(`Cannot load "${activeFile}". Are you running a local web server? Browsers block direct local file access.`);
+                        setIsLoading(false);
+                    });
+            }, [activeFile]);
+
+            // --- Toggle Interactions ---
+            const toggleFavorite = (id) => {
+                setFavoriteIds(prev => {
+                    const next = new Set(prev);
+                    next.has(id) ? next.delete(id) : next.add(id);
+                    return next;
+                });
+            };
+
+            const toggleCompleted = (id) => {
+                setCompletedIds(prev => {
+                    const next = new Set(prev);
+                    next.has(id) ? next.delete(id) : next.add(id);
+                    return next;
+                });
+            };
+
+            const toggleCollapse = (id) => {
+                setCollapsedIds(prev => {
+                    const next = new Set(prev);
+                    next.has(id) ? next.delete(id) : next.add(id);
+                    return next;
+                });
+            };
+
+            const toggleCollapseAll = () => {
+                if (collapsedIds.size > 0) {
+                    setCollapsedIds(new Set()); 
+                } else {
+                    setCollapsedIds(new Set(questions.map(q => q.id))); 
+                }
+            };
+
+            const toggleLessonFilter = (lesson) => {
+                setSelectedLessons(prev => {
+                    const next = new Set(prev);
+                    next.has(lesson) ? next.delete(lesson) : next.add(lesson);
+                    return next;
+                });
+            };
+
+            // --- Search & Filter Logic ---
+            const visibleQuestions = useMemo(() => {
+                let filtered = questions;
+
+                // 1. Filter by Lesson
+                if (selectedLessons.size > 0) {
+                    filtered = filtered.filter(q => selectedLessons.has(q.lesson));
+                }
+
+                // 2. Filter by Search Query
+                if (searchQuery.trim()) {
+                    const query = searchQuery.trim();
+                    const rangeMatch = query.match(/^(\d+)\s*-\s*(\d+)$/);
+                    const idsMatch = query.match(/^(\d+\s*,\s*)*\d+$/);
+
+                    if (rangeMatch) {
+                        const start = parseInt(rangeMatch[1]);
+                        const end = parseInt(rangeMatch[2]);
+                        filtered = filtered.filter(q => q.id >= start && q.id <= end);
+                    } else if (idsMatch) {
+                        const ids = query.split(',').map(id => parseInt(id.trim()));
+                        filtered = filtered.filter(q => ids.includes(q.id));
+                    } else {
+                        const lowerQ = query.toLowerCase();
+                        filtered = filtered.filter(q => 
+                            q.question.toLowerCase().includes(lowerQ) ||
+                            q.options.some(opt => opt.toLowerCase().includes(lowerQ)) ||
+                            q.explanation.toLowerCase().includes(lowerQ) ||
+                            q.tag.toLowerCase().includes(lowerQ) ||
+                            (q.answerText && q.answerText.toLowerCase().includes(lowerQ))
+                        );
+                    }
+                }
+
+                // 3. Filter by Active Tab
+                if (activeTab === 'Favorites') {
+                    filtered = filtered.filter(q => favoriteIds.has(q.id));
+                } else if (activeTab === 'Completed') {
+                    filtered = filtered.filter(q => completedIds.has(q.id));
+                }
+
+                return filtered;
+            }, [questions, searchQuery, activeTab, favoriteIds, completedIds, selectedLessons]);
+
+
+            // --- Export Functions ---
+            const copyToClipboard = () => {
+                if(visibleQuestions.length === 0) return showToast("No questions to copy");
+                let text = `QnA Export - ${activeFile}\n\n`;
+                visibleQuestions.forEach(q => {
+                    text += `[ID: ${q.id} | ${q.lesson}]\n${q.question}\n`;
+                    if (displaySettings.showOptions && q.options.length > 0) {
+                        q.options.forEach((opt, i) => { text += `  ${String.fromCharCode(65 + i)}) ${opt}\n`; });
+                    }
+                    if (displaySettings.showAnswer) text += `  Answer: ${q.answerKey ? q.answerKey + ' - ' : ''}${q.answerText}\n`;
+                    if (displaySettings.showExplanation && q.explanation) text += `  Explanation: ${q.explanation}\n`;
+                    if (displaySettings.showTags && q.tag) text += `  Tags: ${q.tag}\n`;
+                    text += `\n---------------------------------------\n\n`;
+                });
+                
+                const el = document.createElement('textarea');
+                el.value = text;
+                document.body.appendChild(el);
+                el.select();
+                try { document.execCommand('copy'); showToast("Copied to clipboard!"); } 
+                catch (err) { alert("Failed to copy text."); }
+                document.body.removeChild(el);
+            };
+
+            const exportToPDF = () => {
+                if(visibleQuestions.length === 0) return showToast("No questions to export");
+                setIsExporting(true);
+                showToast("Generating PDF... Please wait.");
+                
+                const element = document.getElementById('questions-container');
+                const vars = getCurrentThemeVars();
+                
+                const opt = {
+                    margin:       displaySettings.compactMode ? 0.2 : 0.5,
+                    filename:     `QnA_${activeTab}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true, backgroundColor: vars['--bg'], windowWidth: 1024 },
+                    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+                    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+                
+                html2pdf().set(opt).from(element).save().then(() => {
+                    setIsExporting(false);
+                    showToast("PDF Downloaded successfully!");
+                }).catch(err => {
+                    setIsExporting(false);
+                    showToast("PDF Export Failed.");
+                });
+            };
+
+            const exportToDocx = () => {
+                if(visibleQuestions.length === 0) return showToast("No questions to export");
+                
+                const vars = getCurrentThemeVars();
+                const bg = vars['--bg'];
+                const cardBg = vars['--card'];
+                const text = vars['--text'];
+                const primary = vars['--primary'];
+                const border = vars['--border'];
+
+                const isCompact = displaySettings.compactMode;
+                const containerPadding = isCompact ? "10px" : "20px";
+                const tableMargin = isCompact ? "10px" : "30px";
+                const cellPadding = isCompact ? "10" : "20";
+                const itemMargin = isCompact ? "5px 0" : "15px 0";
+
+                let html = `
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: ${bg}; padding: ${containerPadding};">
+                    <h2 style="color: ${text}; text-align: center; margin-bottom: 20px; font-size: ${isCompact ? '18px' : '24px'}">QnA Hub Export</h2>
+                `;
+
+                visibleQuestions.forEach(q => {
+                    html += `
+                    <table width="100%" cellpadding="${cellPadding}" cellspacing="0" style="margin-bottom: ${tableMargin}; border: 1px solid ${border}; background-color: ${cardBg}; border-collapse: collapse;">
+                        <tr>
+                            <td style="color: ${text};">
+                                <div style="font-size: ${isCompact ? '14px' : '16px'}; font-weight: bold; margin-bottom: ${isCompact ? '8px' : '15px'};">
+                                    <span style="background-color: ${primary}; color: #ffffff; padding: 2px 6px; font-size: 11px; margin-right: 8px; border-radius: 4px;">ID: ${q.id}</span>
+                                    <span style="background-color: #e5e7eb; color: #374151; padding: 2px 6px; font-size: 11px; margin-right: 8px; border-radius: 4px;">${q.lesson.replace(/</g, '&lt;')}</span><br/><br/>
+                                    ${q.question.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                                </div>
+                    `;
+
+                    if (!collapsedIds.has(q.id)) {
+                        if (displaySettings.showOptions && q.options.length > 0) {
+                            html += `<div style="margin: ${itemMargin};">`;
+                            q.options.forEach((opt, i) => {
+                                const char = String.fromCharCode(65 + i);
+                                const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
+                                let optStyle = `padding: 8px; margin-bottom: 4px; border: 1px solid ${border}; background-color: ${bg}; color: ${text}; font-size: ${isCompact ? '13px' : '14px'}`;
+                                if (displaySettings.showAnswer && isCorrect) optStyle = `padding: 8px; margin-bottom: 4px; border: 1px solid #22c55e; background-color: #dcfce7; color: #166534; font-weight: bold; font-size: ${isCompact ? '13px' : '14px'}`;
+                                html += `<div style="${optStyle}"><strong>${char}.</strong> ${opt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+                            });
+                            html += `</div>`;
+                        }
+
+                        if (displaySettings.showAnswer && q.answerText && (!displaySettings.showOptions || q.options.length === 0)) {
+                            html += `<div style="margin: ${itemMargin}; padding: 8px; background-color: #dcfce7; border: 1px solid #22c55e; color: #166534; font-size: ${isCompact ? '13px' : '14px'}"><strong>Answer:</strong> ${q.answerKey ? q.answerKey + ' - ' : ''}${q.answerText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+                        }
+                        if (displaySettings.showExplanation && q.explanation) {
+                            html += `<div style="margin: ${itemMargin}; padding: 8px; background-color: ${bg}; border-left: 4px solid ${primary};"><strong style="font-size: 11px; text-transform: uppercase; color: ${text};">Explanation</strong><p style="margin: 3px 0 0 0; color: ${text}; font-size: ${isCompact ? '13px' : '14px'}">${q.explanation.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p></div>`;
+                        }
+                    }
+
+                    html += `</td></tr></table>`;
+                });
+                
+                html += `</div>`;
+
+                const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Questions Export</title></head><body>";
+                const fullHTML = header + html + "</body></html>";
+                
+                const blob = new Blob(['\ufeff', fullHTML], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `QnA_${activeTab}.doc`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast("Exported to fully styled Docx!");
+            };
+
+            const progressPercentage = questions.length > 0 ? Math.round((completedIds.size / questions.length) * 100) : 0;
+
+            return (
+                <div className="min-h-screen pb-12">
+                    {/* Header */}
+                    <header className="bg-themeCard border-b border-themeBorder sticky top-0 z-40 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-themePrimary text-white rounded-lg">
+                                    <Icons.FileText />
+                                </div>
+                                <h1 className="text-xl font-bold text-themeText hidden sm:block">QnA Hub</h1>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 relative">
+                                
+                                {/* FILE SELECTOR (Shows only if multiple files are in CONFIG) */}
+                                {AVAILABLE_FILES.length > 1 && (
+                                    <select 
+                                        className="bg-themeBg text-themeText border border-themeBorder rounded-md px-3 py-1.5 focus:outline-none focus:border-themePrimary max-w-[200px] truncate"
+                                        value={activeFile}
+                                        onChange={(e) => setActiveFile(e.target.value)}
+                                    >
+                                        {AVAILABLE_FILES.map(f => <option key={f} value={f}>{f}</option>)}
+                                    </select>
+                                )}
+
+                                <div className="flex items-center gap-2">
+                                    <Icons.Palette />
+                                    <select 
+                                        className="bg-themeBg text-themeText border border-themeBorder rounded-md px-3 py-1.5 focus:outline-none focus:border-themePrimary"
+                                        value={selectedTheme}
+                                        onChange={(e) => {
+                                            setSelectedTheme(e.target.value);
+                                            setShowCustomThemeEditor(e.target.value === 'Custom');
+                                        }}
+                                    >
+                                        {THEMES.map(t => (
+                                            <option key={t.name} value={t.name}>{t.name}</option>
+                                        ))}
+                                        <option value="Custom">Custom...</option>
+                                    </select>
+                                </div>
+                                
+                                {showCustomThemeEditor && selectedTheme === 'Custom' && (
+                                    <div className="absolute top-12 right-0 w-64 p-4 bg-themeCard border border-themeBorder shadow-lg rounded-xl z-50 animate-fade-in">
+                                        <h4 className="text-sm font-semibold mb-3 border-b border-themeBorder pb-2">Custom Theme</h4>
+                                        {[
+                                            { label: 'Background', key: '--bg' },
+                                            { label: 'Card Base', key: '--card' },
+                                            { label: 'Text Color', key: '--text' },
+                                            { label: 'Primary', key: '--primary' },
+                                            { label: 'Border', key: '--border' }
+                                        ].map(color => (
+                                            <div key={color.key} className="flex justify-between items-center mb-2">
+                                                <label className="text-xs">{color.label}</label>
+                                                <input 
+                                                    type="color" 
+                                                    value={customTheme[color.key]}
+                                                    onChange={(e) => setCustomTheme(prev => ({ ...prev, [color.key]: e.target.value }))}
+                                                    className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                                                />
+                                            </div>
+                                        ))}
+                                        <button 
+                                            onClick={() => setShowCustomThemeEditor(false)}
+                                            className="w-full mt-2 text-xs bg-themePrimary text-white py-1 rounded"
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Navigation Tabs & Progress */}
+                    {!isLoading && questions.length > 0 && (
+                        <div className="bg-themeCard border-b border-themeBorder shadow-sm relative z-30">
+                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 py-3">
+                                
+                                <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                                    {['All', 'Favorites', 'Completed'].map(tab => {
+                                        let count = questions.length;
+                                        if(tab === 'Favorites') count = favoriteIds.size;
+                                        if(tab === 'Completed') count = completedIds.size;
+                                        return (
+                                            <button
+                                                key={tab}
+                                                onClick={() => setActiveTab(tab)}
+                                                className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors flex items-center gap-2
+                                                    ${activeTab === tab ? 'bg-themePrimary text-white' : 'hover:bg-themeBg opacity-70 hover:opacity-100'}`}
+                                            >
+                                                {tab === 'Favorites' && <Icons.Star filled={activeTab === 'Favorites'} />}
+                                                {tab === 'Completed' && <Icons.CheckCircle />}
+                                                {tab === 'All' && <Icons.List />}
+                                                {tab} ({count})
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                
+                                <div className="flex items-center gap-3 w-full sm:w-64">
+                                    <span className="text-sm font-bold opacity-70 whitespace-nowrap">Progress: {progressPercentage}%</span>
+                                    <div className="flex-1 h-2.5 bg-themeBg rounded-full overflow-hidden border border-themeBorder">
+                                        <div 
+                                            className="h-full bg-green-500 transition-all duration-500 ease-out"
+                                            style={{ width: `${progressPercentage}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Toolbar */}
+                    {!isLoading && questions.length > 0 && (
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+                            <div className="bg-themeCard border border-themeBorder rounded-xl p-4 sm:p-6 shadow-sm flex flex-col gap-6">
+                                
+                                {/* Filters & Search */}
+                                <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+                                    
+                                    {/* Lesson Filter Dropdown */}
+                                    <div className="relative w-full lg:w-1/3 z-20">
+                                        <button 
+                                            onClick={() => setIsLessonDropdownOpen(!isLessonDropdownOpen)}
+                                            className="w-full flex justify-between items-center px-4 py-2 border border-themeBorder rounded-lg bg-themeBg text-themeText hover:border-themePrimary transition-colors"
+                                        >
+                                            <span className="flex items-center gap-2 truncate">
+                                                <Icons.Filter />
+                                                {selectedLessons.size === 0 
+                                                    ? "Filter by Lesson (All)" 
+                                                    : `${selectedLessons.size} Lesson(s) Selected`}
+                                            </span>
+                                            {isLessonDropdownOpen ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+                                        </button>
+                                        
+                                        {isLessonDropdownOpen && (
+                                            <div className="absolute top-full left-0 mt-2 w-full bg-themeCard border border-themeBorder rounded-lg shadow-xl dropdown-scroll py-2">
+                                                {availableLessons.map(lesson => (
+                                                    <label key={lesson} className="flex items-center gap-3 px-4 py-2 hover:bg-themeBg cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedLessons.has(lesson)}
+                                                            onChange={() => toggleLessonFilter(lesson)}
+                                                            className="w-4 h-4 rounded text-themePrimary focus:ring-themePrimary"
+                                                        />
+                                                        <span className="text-sm truncate" title={lesson}>{lesson}</span>
+                                                    </label>
+                                                ))}
+                                                {availableLessons.length === 0 && (
+                                                    <div className="px-4 py-2 text-sm opacity-50">No lessons detected in file.</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Search Bar */}
+                                    <div className="relative w-full lg:flex-1">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-themeText opacity-50">
+                                            <Icons.Search />
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            className="block w-full pl-10 pr-3 py-2 border border-themeBorder rounded-lg bg-themeBg text-themeText placeholder-themeText placeholder-opacity-50 focus:outline-none focus:ring-2 focus:ring-themePrimary"
+                                            placeholder="Search text, ID (ex: 5, 10), or range (ex: 1-10)..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Export Buttons */}
+                                    <div className="flex gap-2 w-full lg:w-auto">
+                                        <button onClick={copyToClipboard} title="Copy as Text" className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-themeBorder rounded-lg bg-themeCard hover:bg-themeBg transition-colors">
+                                            <Icons.Copy /> <span className="sr-only sm:not-sr-only text-sm">Copy</span>
+                                        </button>
+                                        <button onClick={exportToPDF} disabled={isExporting} title="Export to PDF" className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-themeBorder rounded-lg bg-themeCard hover:bg-themeBg transition-colors disabled:opacity-50">
+                                            {isExporting ? <Icons.Loader /> : <Icons.FileText />} <span className="sr-only sm:not-sr-only text-sm">PDF</span>
+                                        </button>
+                                        <button onClick={exportToDocx} title="Export to Docx" className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-themeBorder rounded-lg bg-themeCard hover:bg-themeBg transition-colors">
+                                            <Icons.Download /> <span className="sr-only sm:not-sr-only text-sm">Docx</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-themeBorder w-full"></div>
+
+                                {/* Display Settings */}
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <span className="text-sm font-semibold opacity-70 mr-2">Display:</span>
+                                    {[
+                                        { key: 'showOptions', label: 'Options', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
+                                        { key: 'showAnswer', label: 'Answers', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
+                                        { key: 'showExplanation', label: 'Explanations', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
+                                        { key: 'showTags', label: 'Tags', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
+                                        { key: 'compactMode', label: 'Compact', iconOn: <Icons.Minimize/>, iconOff: <Icons.Minimize/> }
+                                    ].map(setting => (
+                                        <button
+                                            key={setting.key}
+                                            onClick={() => setDisplaySettings(prev => ({...prev, [setting.key]: !prev[setting.key]}))}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm transition-all
+                                                ${setting.key === 'compactMode' && displaySettings.compactMode ? 'bg-indigo-500 text-white border-indigo-500' : ''}
+                                                ${setting.key !== 'compactMode' && displaySettings[setting.key] ? 'bg-themePrimary text-white border-themePrimary' : ''}
+                                                ${!displaySettings[setting.key] ? 'bg-themeBg text-themeText border-themeBorder hover:bg-themeBorder opacity-70' : ''}`}
+                                        >
+                                            {displaySettings[setting.key] ? setting.iconOn : setting.iconOff}
+                                            <span className="hidden sm:inline">{setting.label}</span>
+                                        </button>
+                                    ))}
+                                    
+                                    <div className="ml-auto flex items-center gap-2">
+                                        <button 
+                                            onClick={toggleCollapseAll}
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-themeBorder bg-themeBg text-sm hover:bg-themeCard transition-colors"
+                                        >
+                                            {collapsedIds.size > 0 ? <Icons.ChevronDown /> : <Icons.ChevronUp />}
+                                            {collapsedIds.size > 0 ? "Expand All" : "Collapse All"}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Main Content Area */}
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+                        
+                        {/* Error / Loading States */}
+                        {isLoading && (
+                            <div className="flex flex-col items-center justify-center py-20 opacity-70">
+                                <Icons.Loader />
+                                <p className="mt-4 font-bold">Loading File...</p>
+                            </div>
+                        )}
+
+                        {fetchError && !isLoading && (
+                            <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
+                                <Icons.Alert />
+                                <h2 className="text-xl font-bold mt-4 mb-2 text-red-500">Auto-Load Failed</h2>
+                                <p className="opacity-80 leading-relaxed bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200">
+                                    {fetchError}
+                                </p>
+                            </div>
+                        )}
+
+                        {!isLoading && !fetchError && questions.length > 0 && (
+                            <div id="questions-container" className="pb-8">
+                                {visibleQuestions.map((q) => {
+                                    const isCollapsed = collapsedIds.has(q.id);
+                                    const isFavorite = favoriteIds.has(q.id);
+                                    const isCompleted = completedIds.has(q.id);
+                                    
+                                    return (
+                                    <div key={q.id} className={`bg-themeCard border border-themeBorder shadow-sm break-inside-avoid transition-all ${isCompleted ? 'opacity-80' : ''} ${displaySettings.compactMode ? 'mb-2 p-3 sm:p-4 rounded-lg' : 'mb-6 p-5 sm:p-6 rounded-xl'}`}>
+                                        
+                                        <div className={`flex justify-between items-start gap-3 ${displaySettings.compactMode || isCollapsed ? 'mb-0' : 'mb-4'}`}>
+                                            
+                                            <div className="flex items-start gap-3 flex-1">
+                                                <button 
+                                                    onClick={() => toggleCompleted(q.id)}
+                                                    className="mt-0.5 shrink-0 focus:outline-none"
+                                                    title={isCompleted ? "Mark as unread" : "Mark as done"}
+                                                >
+                                                    {isCompleted ? <Icons.CheckCircle /> : <Icons.Circle />}
+                                                </button>
+                                                <div className="flex-1">
+                                                    {/* Lesson Badge displayed right above question text */}
+                                                    {q.lesson && q.lesson !== "General" && (
+                                                        <div className="inline-block px-2 py-0.5 bg-themeBg border border-themeBorder rounded text-[10px] font-bold uppercase opacity-70 mb-2 truncate max-w-full" title={q.lesson}>
+                                                            {q.lesson}
+                                                        </div>
+                                                    )}
+                                                    <h3 className={`font-bold leading-relaxed cursor-pointer ${displaySettings.compactMode ? 'text-base' : 'text-lg'} ${isCompleted ? 'line-through opacity-70' : ''}`} onClick={() => toggleCollapse(q.id)}>
+                                                        {q.question}
+                                                    </h3>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                                                <button onClick={() => toggleFavorite(q.id)} className="p-1 focus:outline-none" title="Toggle Favorite">
+                                                    <Icons.Star filled={isFavorite} />
+                                                </button>
+                                                <button onClick={() => toggleCollapse(q.id)} className="p-1 opacity-50 hover:opacity-100 focus:outline-none" title="Expand/Collapse">
+                                                    {isCollapsed ? <Icons.ChevronDown /> : <Icons.ChevronUp />}
+                                                </button>
+                                                <div className={`bg-themePrimary text-white font-bold rounded-full shadow-sm ml-1 sm:ml-2 ${displaySettings.compactMode ? 'text-[10px] px-2 py-0.5' : 'text-xs px-3 py-1'}`}>
+                                                    ID: {q.id}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {!isCollapsed && (
+                                            <div className="mt-4 animate-fade-in border-t border-themeBorder pt-4">
+                                                {displaySettings.showOptions && q.options && q.options.length > 0 && (
+                                                    <div className={`${displaySettings.compactMode ? 'space-y-1 mb-2' : 'space-y-2 mb-4'}`}>
+                                                        {q.options.map((opt, i) => {
+                                                            const char = String.fromCharCode(65 + i);
+                                                            const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
+                                                            const highlightClass = (displaySettings.showAnswer && isCorrect) 
+                                                                ? 'bg-green-100 dark:bg-green-900 border-green-500 text-green-900 dark:text-green-100 font-medium' 
+                                                                : 'bg-themeBg border-themeBorder';
+
+                                                            return (
+                                                                <div key={i} className={`flex items-start gap-3 border rounded-lg ${highlightClass} ${displaySettings.compactMode ? 'p-1.5 text-sm' : 'p-3'}`}>
+                                                                    <span className="font-bold min-w-[20px] opacity-70">{char}.</span>
+                                                                    <span className="flex-1 leading-relaxed">{opt}</span>
+                                                                    {displaySettings.showAnswer && isCorrect && (
+                                                                        <span className="text-green-600 dark:text-green-400 shrink-0"><Icons.Check /></span>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                )}
+
+                                                {displaySettings.showAnswer && q.answerText && (!displaySettings.showOptions || q.options.length === 0) && (
+                                                    <div className={`bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-900 dark:text-green-100 flex items-start gap-2 ${displaySettings.compactMode ? 'mb-2 p-2 text-sm' : 'mb-4 p-3'}`}>
+                                                        <div className="shrink-0"><Icons.Check /></div>
+                                                        <div>
+                                                            <span className="font-bold mr-2">Answer:</span> 
+                                                            {q.answerKey ? `${q.answerKey} - ` : ''} {q.answerText}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {displaySettings.showExplanation && q.explanation && (
+                                                    <div className={`bg-themeBg border-l-4 border-themePrimary rounded-r-lg ${displaySettings.compactMode ? 'mb-2 p-2 text-xs' : 'mb-4 p-4 text-sm'}`}>
+                                                        <span className={`font-bold uppercase opacity-70 tracking-wider block ${displaySettings.compactMode ? 'mb-0.5 text-[10px]' : 'mb-1 text-sm'}`}>Explanation</span>
+                                                        <p className="leading-relaxed opacity-90">{q.explanation}</p>
+                                                    </div>
+                                                )}
+
+                                                {displaySettings.showTags && q.tag && (
+                                                    <div className={`flex flex-wrap gap-2 ${displaySettings.compactMode ? 'mt-2' : 'mt-4'}`}>
+                                                        <span className={`inline-flex items-center gap-1.5 font-bold bg-slate-200 text-slate-800 border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 shadow-sm rounded-md ${displaySettings.compactMode ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}`}>
+                                                            <Icons.Tag />
+                                                            {q.tag}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )})}
+
+                                {visibleQuestions.length === 0 && (
+                                    <div className="text-center py-12 opacity-60 border-2 border-dashed border-themeBorder rounded-xl">
+                                        <p className="text-lg">No questions found in this view.</p>
+                                        <p className="text-sm mt-2">Try adjusting your filters, search, or switching tabs.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Toast Notification */}
+                    {toastMessage && (
+                        <div className="fixed bottom-6 right-6 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg font-medium animate-fade-in flex items-center gap-2">
+                            <Icons.Check />
+                            {toastMessage}
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
