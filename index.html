@@ -396,6 +396,77 @@ function resolveQuery(query, questions) {
   return resolveAtom(q, questions);
 }
 
+// ═══════════════════════════════ COLLECTION ROW ═══════════════════════════════
+function CollectionRow({ c, idx, isActive, onSelect, onDelete, onRename, onRecolor, onMoveUp, onMoveDown, isFirst, isLast }) {
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(c.name);
+  const inputRef = useRef(null);
+
+  const commitEdit = () => {
+    const trimmed = draftName.trim();
+    if (trimmed && trimmed !== c.name) onRename(trimmed);
+    else setDraftName(c.name);
+    setEditing(false);
+  };
+
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  return (
+    <div
+      style={{ display:'flex', alignItems:'center', gap:4, padding:'6px 8px', borderRadius:8, cursor:'pointer',
+        background: isActive ? 'var(--card2)' : 'transparent',
+        border: isActive ? '1px solid var(--border2)' : '1px solid transparent',
+        transition:'background .12s' }}
+      onClick={() => { if (!editing) onSelect(); }}
+    >
+      {/* Color swatch — click to recolor */}
+      <input type="color" value={c.color}
+        onChange={e => onRecolor(e.target.value)}
+        onClick={e => e.stopPropagation()}
+        title="Click to change color"
+        style={{ width:14, height:14, border:'none', borderRadius:'50%', cursor:'pointer', padding:0,
+          flexShrink:0, outline:'none', background:'transparent' }}/>
+
+      {/* Name — double-click to edit */}
+      {editing ? (
+        <input ref={inputRef}
+          value={draftName}
+          onChange={e => setDraftName(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={e => { if(e.key==='Enter') commitEdit(); if(e.key==='Escape'){setDraftName(c.name);setEditing(false);} }}
+          onClick={e => e.stopPropagation()}
+          style={{ flex:1, fontSize:12, background:'var(--card)', border:'1px solid var(--primary)',
+            borderRadius:4, padding:'1px 5px', color:'var(--text)', fontFamily:'var(--font)', outline:'none' }}/>
+      ) : (
+        <span
+          onDoubleClick={e => { e.stopPropagation(); setEditing(true); }}
+          style={{ flex:1, fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
+          title={`Double-click to rename: ${c.name}`}>{c.name}</span>
+      )}
+
+      <span style={{ fontSize:10, color:'var(--muted)', fontFamily:'var(--mono)', flexShrink:0 }}>{c.qIds.length}</span>
+
+      {/* Reorder buttons */}
+      <div style={{ display:'flex', flexDirection:'column', gap:0, flexShrink:0 }}>
+        <button onClick={e=>{e.stopPropagation();onMoveUp();}}
+          disabled={isFirst}
+          title="Move up"
+          style={{ background:'none', border:'none', cursor:isFirst?'not-allowed':'pointer', color:'var(--muted)', padding:0, lineHeight:1, fontSize:9, opacity:isFirst?0.2:0.7 }}>▲</button>
+        <button onClick={e=>{e.stopPropagation();onMoveDown();}}
+          disabled={isLast}
+          title="Move down"
+          style={{ background:'none', border:'none', cursor:isLast?'not-allowed':'pointer', color:'var(--muted)', padding:0, lineHeight:1, fontSize:9, opacity:isLast?0.2:0.7 }}>▼</button>
+      </div>
+
+      {/* Delete */}
+      <button onClick={e => { e.stopPropagation(); onDelete(); }}
+        title="Delete collection"
+        style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', padding:0, display:'flex', flexShrink:0 }}><I.X s={11}/></button>
+    </div>
+  );
+}
+
+
 function CollectionsModal({ questions, collections, onSave, onClose, pinnedIds, favIds, completedIds, wrongIds }) {
   const [colls, setColls] = useState(() => JSON.parse(JSON.stringify(collections)));
   const [newName, setNewName] = useState('');
@@ -492,23 +563,26 @@ function CollectionsModal({ questions, collections, onSave, onClose, pinnedIds, 
         {/* Body: list + editor */}
         <div style={{ display:'flex', gap:12, minHeight:360 }}>
 
-          {/* Left: collection list */}
-          <div style={{ width:190, borderRight:'1px solid var(--border)', paddingRight:10, flexShrink:0 }}>
+          {/* Left: collection list with drag reorder + inline edit */}
+          <div style={{ width:210, borderRight:'1px solid var(--border)', paddingRight:10, flexShrink:0, display:'flex', flexDirection:'column', gap:2 }}>
             {colls.length === 0 && (
               <div style={{ fontSize:12, color:'var(--muted)', textAlign:'center', padding:'30px 0' }}>No collections yet</div>
             )}
-            {colls.map(c => (
-              <div key={c.id}
-                style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderRadius:8, cursor:'pointer',
-                  background: active===c.id ? 'var(--card2)' : 'transparent', marginBottom:3,
-                  border: active===c.id ? '1px solid var(--border2)' : '1px solid transparent' }}
-                onClick={() => setActive(c.id)}>
-                <div style={{ width:9, height:9, borderRadius:'50%', background:c.color, flexShrink:0 }}/>
-                <span style={{ flex:1, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</span>
-                <span style={{ fontSize:10, color:'var(--muted)', fontFamily:'var(--mono)' }}>{c.qIds.length}</span>
-                <button onClick={e => { e.stopPropagation(); del(c.id); }}
-                  style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', padding:0, display:'flex' }}><I.X s={11}/></button>
-              </div>
+            {colls.map((c, idx) => (
+              <CollectionRow
+                key={c.id}
+                c={c}
+                idx={idx}
+                isActive={active===c.id}
+                onSelect={()=>setActive(c.id)}
+                onDelete={()=>del(c.id)}
+                onRename={(name)=>setColls(prev=>prev.map(x=>x.id!==c.id?x:{...x,name}))}
+                onRecolor={(color)=>setColls(prev=>prev.map(x=>x.id!==c.id?x:{...x,color}))}
+                onMoveUp={()=>setColls(prev=>{const a=[...prev];if(idx===0)return a;[a[idx-1],a[idx]]=[a[idx],a[idx-1]];return a;})}
+                onMoveDown={()=>setColls(prev=>{const a=[...prev];if(idx===a.length-1)return a;[a[idx],a[idx+1]]=[a[idx+1],a[idx]];return a;})}
+                isFirst={idx===0}
+                isLast={idx===colls.length-1}
+              />
             ))}
           </div>
 
@@ -1491,6 +1565,7 @@ function App() {
   const [dSearch, setDSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [activeCollId, setActiveCollId] = useState(null);
+  const [qFilters, setQFilters] = useState(new Set(['unsolved'])); // multi-select: 'done'|'unsolved'|'fav'|'weak'|'all'
   const [selectedLessons, setSelectedLessons] = useState(new Set());
   const [lessonDDOpen, setLessonDDOpen] = useState(false);
   const [displaySettings, setDisplaySettings] = useState(()=>load('display',{showOptions:true,showAnswer:true,showExplanation:true,showTags:true}));
@@ -1616,6 +1691,18 @@ function App() {
     setSelectedLessons(prev=>{ const n=new Set(prev); n.has(l)?n.delete(l):n.add(l); return n; });
   }, []);
 
+  const toggleQFilter = useCallback(key => {
+    setQFilters(prev => {
+      const n = new Set(prev);
+      if (key === 'all') { return new Set(['all']); }
+      // Toggle this filter; if 'all' was set, clear it first
+      n.delete('all');
+      if (n.has(key)) { n.delete(key); if (n.size === 0) n.add('all'); }
+      else n.add(key);
+      return n;
+    });
+  }, []);
+
   const toggleLocalAns = useCallback((qId) => {
     setLocalAnsOverrides(prev => {
       const cur = prev[qId];
@@ -1684,18 +1771,28 @@ function App() {
       }
     }
 
-    if (activeTab==='Favorites') f=f.filter(x=>favIds.has(x.id));
-    else if (activeTab==='Done') f=f.filter(x=>completedIds.has(x.id));
-    else if (activeTab==='Unsolved') f=f.filter(x=>!completedIds.has(x.id));
-    else if (activeTab==='SR Due') f=f.filter(x=>isDue(srData[x.id]));
-    else if (activeTab==='Weak') f=f.filter(x=>weakIds.has(x.id));
-    else if (activeTab==='Collection'&&activeCollId) {
+    // Tab-level scope (collection)
+    if (activeTab==='Collection'&&activeCollId) {
       const col=collections.find(c=>c.id===activeCollId);
       if (col) f=f.filter(x=>col.qIds.includes(x.id));
     }
+    // SR Due tab (kept as tab since it has its own count)
+    else if (activeTab==='SR Due') f=f.filter(x=>isDue(srData[x.id]));
+
+    // Quick filter chips (multi-select, applied after tab scope)
+    // 'all' = no filter; otherwise union of selected filters
+    if (!qFilters.has('all') && qFilters.size > 0) {
+      f = f.filter(x => {
+        if (qFilters.has('done')    && completedIds.has(x.id))  return true;
+        if (qFilters.has('unsolved') && !completedIds.has(x.id)) return true;
+        if (qFilters.has('fav')     && favIds.has(x.id))        return true;
+        if (qFilters.has('weak')    && weakIds.has(x.id))       return true;
+        return false;
+      });
+    }
 
     return f;
-  },[questions,dSearch,activeTab,activeCollId,favIds,completedIds,pinnedIds,selectedLessons,srData,weakIds,collections,customTags]);
+  },[questions,dSearch,activeTab,activeCollId,favIds,completedIds,pinnedIds,selectedLessons,srData,weakIds,collections,customTags,qFilters]);
 
   const pct = questions.length>0?Math.round((completedIds.size/questions.length)*100):0;
 
@@ -1814,11 +1911,7 @@ function App() {
   // ── Tabs ──
   const TABS = [
     {id:'All',label:'All',count:questions.length,cls:''},
-    {id:'Unsolved',label:'Unsolved',count:questions.length-completedIds.size,cls:'act-y'},
     {id:'SR Due',label:'SR Due',count:srDueCount,cls:'act-p'},
-    {id:'Weak',label:'Weak',count:weakIds.size,cls:''},
-    {id:'Favorites',label:'Stars',count:favIds.size,cls:'act-y'},
-    {id:'Done',label:'Done',count:completedIds.size,cls:'act-g'},
   ];
 
   // practicePool = ALL questions with options (global, not view-filtered)
@@ -1925,6 +2018,28 @@ function App() {
               )}
             </div>
 
+            {/* Quick filter chips */}
+            <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+              {[
+                {key:'all',    label:'All',     color:'var(--muted)'},
+                {key:'unsolved',label:'Unsolved',color:'var(--yellow)'},
+                {key:'done',   label:'Done',    color:'var(--green)'},
+                {key:'fav',    label:'★ Fav',   color:'var(--yellow)'},
+                {key:'weak',   label:'⚡ Weak', color:'var(--red)'},
+              ].map(f => {
+                const on = qFilters.has(f.key) || (f.key==='all' && qFilters.has('all'));
+                return (
+                  <button key={f.key} onClick={()=>toggleQFilter(f.key)}
+                    style={{padding:'4px 9px',borderRadius:6,fontSize:11,fontWeight:600,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap',
+                      border:`1px solid ${on ? f.color : 'var(--border2)'}`,
+                      background: on ? f.color+'22' : 'var(--card2)',
+                      color: on ? f.color : 'var(--muted)'}}>
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Search */}
             <div style={{position:'relative',flex:1,minWidth:200}}>
               <div style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'var(--muted)'}}><I.Search/></div>
@@ -2006,7 +2121,14 @@ function App() {
         {!isLoading&&!fetchError&&questions.length>0&&(
           <>
             <div style={{color:'var(--muted)',fontSize:11,marginBottom:12,fontFamily:'var(--mono)',display:'flex',alignItems:'center',gap:12}}>
-              <span>Showing {visibleQuestions.length} of {questions.length}</span>
+              <span>
+                Showing {visibleQuestions.length} of {questions.length}
+                {!qFilters.has('all') && qFilters.size>0 && (
+                  <span style={{color:'var(--primary)',marginLeft:6}}>
+                    [{Array.from(qFilters).join('+')}]
+                  </span>
+                )}
+              </span>
               {dSearch&&<span>for "<b style={{color:'var(--text)'}}>{dSearch}</b>"</span>}
               {focusedIdx>=0&&visibleQuestions[focusedIdx]&&<span style={{color:'var(--primary)'}}>focused: Q{visibleQuestions[focusedIdx].id} (J/K to navigate)</span>}
             </div>
