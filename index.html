@@ -67,7 +67,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .dropdown{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);box-shadow:var(--shadowl);z-index:100;overflow:hidden;animation:fadeUp .15s ease-out;max-height:320px;overflow-y:auto}
 .dd-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;cursor:pointer;transition:background .1s}
 .dd-item:hover{background:var(--card2)}
-.toast{position:fixed;bottom:28px;right:28px;z-index:9999;padding:12px 20px;border-radius:var(--r);font-size:13px;font-weight:600;box-shadow:var(--shadowl);display:flex;align-items:center;gap:8px;animation:toastIn .3s ease-out;max-width:340px}
+.toast{position:fixed;bottom:28px;right:28px;z-index:9999;padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:600;box-shadow:var(--shadowl);display:flex;align-items:center;gap:10px;animation:toastIn .3s ease-out;max-width:420px}
+.toast-undo-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.45);border-radius:6px;color:#fff;font-size:11px;font-weight:800;padding:3px 9px;cursor:pointer;white-space:nowrap;font-family:var(--font);transition:background .15s}
+.toast-undo-btn:hover{background:rgba(255,255,255,.35)}
+.toast-x{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.6);padding:0;font-size:16px;line-height:1;margin-left:auto;transition:color .15s}
+.toast-x:hover{color:#fff}
+.bulk-sel{outline:2px solid var(--primary)!important;outline-offset:2px}
+.bulk-bar{position:sticky;top:106px;z-index:45;border-radius:10px;background:var(--primary);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 4px 20px var(--pg);animation:fadeUp .2s ease-out;margin-bottom:10px}
+.bulk-bar button{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s}
+.bulk-bar button:hover{background:rgba(255,255,255,.3)}
+.bulk-bar button:disabled{opacity:.35;cursor:not-allowed}
+.bulk-bar .bulk-sep{width:1px;height:20px;background:rgba(255,255,255,.3);flex-shrink:0}
+.coll-progress{height:3px;border-radius:2px;background:rgba(255,255,255,.2);overflow:hidden;width:36px;margin-left:2px}
+.coll-progress-fill{height:100%;border-radius:2px;background:#fff;transition:width .4s}
 .id-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;background:var(--pg);color:var(--primary);border:1px solid var(--primary);font-weight:500}
 .upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:50px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--primary);background:var(--pg)}
@@ -275,6 +287,7 @@ function ShortcutsPanel({ onClose }) {
       ['Ctrl+P', 'Start practice mode'],
       ['Ctrl+E', 'Open exam launcher (with options)'],
       ['Ctrl+A', 'Reveal/hide ALL answers (clears per-card overrides)'],
+      ['Ctrl+Z', 'Undo last Done/Weak action (while toast is visible)'],
       ['Ctrl+/', 'Toggle compact mode'],
       ['T', 'Cycle theme'],
     ]},
@@ -1246,6 +1259,7 @@ const QuestionCard = memo(function QuestionCard({
   onOpenNote, noteText, onOpenTag, customTag, compact, onTogglePin, collections,
   focused, onFocusClick, localAnsOverride, onToggleLocalAns,
   localOptOverride, onToggleLocalOpt, localExpOverride, onToggleLocalExp,
+  bulkMode, isBulkSelected, onToggleBulk,
 }) {
   const showAns  = localAnsOverride !== undefined ? localAnsOverride : displaySettings.showAnswer;
   const showOpts = localOptOverride  !== undefined ? localOptOverride : displaySettings.showOptions;
@@ -1268,13 +1282,19 @@ const QuestionCard = memo(function QuestionCard({
   return (
     <div
       id={`q-${q.id}`}
-      className={`q-card afu ${isDone?'done':''} ${isPinned&&!isDone?'pinned':''} ${isWeak&&!isDone&&!isPinned?'weak-card':''}`}
-      style={{marginBottom:compact?6:12,outline:focused?'2px solid var(--primary)':'none',outlineOffset:2}}
-      onClick={onFocusClick}
+      className={`q-card afu ${isDone?'done':''} ${isPinned&&!isDone?'pinned':''} ${isWeak&&!isDone&&!isPinned?'weak-card':''} ${isBulkSelected?'bulk-sel':''}`}
+      style={{marginBottom:compact?6:12,outline:focused&&!bulkMode?'2px solid var(--primary)':'none',outlineOffset:2,cursor:bulkMode?'pointer':undefined}}
+      onClick={bulkMode ? (e=>{e.stopPropagation();onToggleBulk(q.id);}) : onFocusClick}
     >
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,padding:compact?'10px 13px':'14px 16px',cursor:'pointer'}} onClick={()=>onToggleCollapse(q.id)}>
         <div style={{display:'flex',alignItems:'flex-start',gap:8,flex:1}}>
+          {bulkMode && (
+            <input type="checkbox" checked={!!isBulkSelected}
+              onChange={e=>{e.stopPropagation();onToggleBulk(q.id);}}
+              onClick={e=>e.stopPropagation()}
+              style={{marginTop:3,width:15,height:15,flexShrink:0,accentColor:'var(--primary)',cursor:'pointer'}}/>
+          )}
           <button onClick={e=>{e.stopPropagation();onToggleDone(q.id);}} style={{marginTop:2,flexShrink:0,background:'none',border:'none',cursor:'pointer',padding:0}} title="Mark done (D)">
             {isDone?<I.CheckCircle size={17}/>:<I.Circle size={17}/>}
           </button>
@@ -1573,7 +1593,11 @@ function App() {
   const [theme, setTheme] = useState(()=>load('theme','dark'));
 
   // UI
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(null);       // {msg,type,undoFn?}
+  const toastTimerRef = useRef(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedBulk, setSelectedBulk] = useState(new Set());
+  const [autoCollapseDone, setAutoCollapseDone] = useState(()=>load('autoCollapseDone',false));
   const [isExporting, setIsExporting] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1); // keyboard nav
   // Modals
@@ -1611,6 +1635,7 @@ function App() {
   useEffect(()=>save('sessions',sessions),[sessions]);
   useEffect(()=>save('display',displaySettings),[displaySettings]);
   useEffect(()=>save('compact',compact),[compact]);
+  useEffect(()=>save('autoCollapseDone',autoCollapseDone),[autoCollapseDone]);
   useEffect(()=>save('theme',theme),[theme]);
 
   // ── Theme ──
@@ -1654,7 +1679,12 @@ function App() {
   },[]);
 
   // ── Toast ──
-  const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+  const showToast = (msg, type='success', undoFn=null) => {
+    clearTimeout(toastTimerRef.current);
+    setToast({msg, type, undoFn});
+    toastTimerRef.current = setTimeout(()=>setToast(null), undoFn ? 5000 : 3000);
+  };
+  const dismissToast = () => { clearTimeout(toastTimerRef.current); setToast(null); };
 
   // ── File loading ──
   const loadFile = (fileName) => {
@@ -1681,7 +1711,24 @@ function App() {
 
   // ── Toggles (useCallback keeps QuestionCard.memo() effective) ──
   const toggleFav      = useCallback((id) => setFavIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
-  const toggleDone     = useCallback((id) => setCompletedIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
+  const toggleDone = useCallback((id) => {
+    setCompletedIds(prev => {
+      const wasDone = prev.has(id);
+      const snap = new Set(prev);
+      const next = new Set(prev);
+      wasDone ? next.delete(id) : next.add(id);
+      if (!wasDone) {
+        // auto-collapse if enabled
+        setCollapsedIds(c => { if (!autoCollapseDone) return c; const n=new Set(c); n.add(id); return n; });
+      }
+      showToast(
+        wasDone ? '↩ Unmarked Done' : '✓ Marked Done',
+        wasDone ? 'warn' : 'success',
+        () => setCompletedIds(snap)
+      );
+      return next;
+    });
+  }, [autoCollapseDone]);
   const togglePin      = useCallback((id) => setPinnedIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
   const toggleCollapse = useCallback((id) => setCollapsedIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
   const toggleCollapseAll = useCallback(() => {
@@ -1740,8 +1787,67 @@ function App() {
     setCompletedIds(prev => { const n=new Set(prev); n.add(qId); return n; });
   }, []);
   const markWeak = useCallback((qId) => {
-    setWrongCounts(prev => ({ ...prev, [qId]: Math.max((prev[qId]||0)+1, 3) }));
+    setWrongCounts(prev => {
+      const snap = {...prev};
+      const next = {...prev, [qId]: Math.max((prev[qId]||0)+1, 3)};
+      showToast('⚡ Marked Weak', 'warn', () => setWrongCounts(snap));
+      return next;
+    });
   }, []);
+
+  // ── Ctrl+Z undo via toast ──
+  // handled in keyboard effect below
+
+  // ── Bulk action helpers ──
+  const toggleBulkSelect = useCallback((id) => {
+    setSelectedBulk(p => { const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
+  }, []);
+
+  const bulkMarkDone = useCallback(() => {
+    if (!selectedBulk.size) return;
+    const snap = new Set(completedIds);
+    const ids = new Set(selectedBulk);
+    setCompletedIds(prev => { const n=new Set(prev); ids.forEach(id=>n.add(id)); return n; });
+    if (autoCollapseDone) setCollapsedIds(prev => { const n=new Set(prev); ids.forEach(id=>n.add(id)); return n; });
+    showToast(`✓ ${ids.size} marked Done`, 'success', () => setCompletedIds(snap));
+    setSelectedBulk(new Set());
+  }, [selectedBulk, completedIds, autoCollapseDone]);
+
+  const bulkMarkWeak = useCallback(() => {
+    if (!selectedBulk.size) return;
+    const snap = {...wrongCounts};
+    const ids = new Set(selectedBulk);
+    setWrongCounts(prev => {
+      const n={...prev}; ids.forEach(id => { n[id]=Math.max((n[id]||0)+1,3); }); return n;
+    });
+    showToast(`⚡ ${ids.size} marked Weak`, 'warn', () => setWrongCounts(snap));
+    setSelectedBulk(new Set());
+  }, [selectedBulk, wrongCounts]);
+
+  const bulkAddToCollection = useCallback((collId) => {
+    if (!selectedBulk.size) return;
+    const ids = new Set(selectedBulk);
+    const snapColls = collections.map(c=>({...c, qIds:[...c.qIds]}));
+    setCollections(prev => prev.map(c => c.id!==collId ? c : {
+      ...c, qIds: Array.from(new Set([...c.qIds, ...ids]))
+    }));
+    const col = collections.find(c=>c.id===collId);
+    showToast(`📁 ${ids.size} added to "${col?.name||''}"`, 'success',
+      () => setCollections(snapColls));
+    setSelectedBulk(new Set());
+  }, [selectedBulk, collections]);
+
+  const bulkRemoveFromColl = useCallback((collId) => {
+    if (!selectedBulk.size || !collId) return;
+    const ids = new Set(selectedBulk);
+    const snapColls = collections.map(c=>({...c, qIds:[...c.qIds]}));
+    setCollections(prev => prev.map(c => c.id!==collId ? c : {
+      ...c, qIds: c.qIds.filter(id=>!ids.has(id))
+    }));
+    showToast(`🗑 ${ids.size} removed from collection`, 'warn',
+      () => setCollections(snapColls));
+    setSelectedBulk(new Set());
+  }, [selectedBulk, collections]);
 
   // ── Search debounce ──
   const handleSearch = val => {
@@ -1821,6 +1927,14 @@ function App() {
 
       // Ctrl shortcuts always active
       if (e.ctrlKey||e.metaKey) {
+        if (e.key==='z'||e.key==='Z') {
+          e.preventDefault();
+          setToast(prev => {
+            if (prev?.undoFn) { clearTimeout(toastTimerRef.current); prev.undoFn(); return null; }
+            return prev;
+          });
+          return;
+        }
         if (e.key==='k'||e.key==='K') { e.preventDefault(); setShowShortcuts(v=>!v); return; }
         if (e.key==='f'||e.key==='F') { e.preventDefault(); searchRef.current?.focus(); return; }
         if (e.key==='r'||e.key==='R') { e.preventDefault(); setShowReport(v=>!v); return; }
@@ -1977,15 +2091,31 @@ function App() {
                   <span style={{fontFamily:'var(--mono)',fontSize:10,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>{tab.count}</span>
                 </button>
               ))}
-              {/* Collection tabs */}
-              {collections.map(c=>(
-                <button key={c.id} className={`tab-btn ${activeTab==='Collection'&&activeCollId===c.id?'active':''}`}
-                  onClick={()=>{setActiveTab('Collection');setActiveCollId(c.id);}}>
-                  <div style={{width:7,height:7,borderRadius:'50%',background:c.color,flexShrink:0}}/>
-                  {c.name}
-                  <span style={{fontFamily:'var(--mono)',fontSize:10,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>{c.qIds.length}</span>
-                </button>
-              ))}
+              {/* Collection tabs with progress bar */}
+              {collections.map(c=>{
+                const done = c.qIds.filter(id=>completedIds.has(id)).length;
+                const total = c.qIds.length;
+                const pctColl = total>0 ? Math.round(done/total*100) : 0;
+                const isActive = activeTab==='Collection'&&activeCollId===c.id;
+                return (
+                  <button key={c.id} className={`tab-btn ${isActive?'active':''}`}
+                    onClick={()=>{setActiveTab('Collection');setActiveCollId(c.id);}}>
+                    <div style={{width:7,height:7,borderRadius:'50%',background:isActive?'#fff':c.color,flexShrink:0}}/>
+                    {c.name}
+                    {/* count + mini progress */}
+                    <div style={{display:'flex',alignItems:'center',gap:4}}>
+                      <span style={{fontFamily:'var(--mono)',fontSize:10,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>
+                        {done}/{total}
+                      </span>
+                      {total>0&&(
+                        <div className="coll-progress">
+                          <div className="coll-progress-fill" style={{width:`${pctColl}%`,background:isActive?'#fff':c.color}}/>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
               <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--mono)'}}>{pct}%</span>
@@ -2065,6 +2195,16 @@ function App() {
               <button className="btn" onClick={toggleCollapseAll} style={{fontSize:11,padding:'5px 9px'}}>
                 {collapsedIds.size>0?'↕ Expand':'↕ Collapse'}
               </button>
+              <button className="btn" onClick={()=>setAutoCollapseDone(v=>!v)}
+                title="Auto-collapse card when marked Done"
+                style={{fontSize:11,padding:'5px 9px',gap:5,...(autoCollapseDone?{background:'var(--green)',color:'#fff',borderColor:'var(--green)'}:{opacity:.65})}}>
+                {autoCollapseDone?'↙ Auto-fold ✓':'↙ Auto-fold'}
+              </button>
+              <button className="btn" onClick={()=>{setBulkMode(v=>!v);setSelectedBulk(new Set());}}
+                title="Bulk-select mode (checkbox select + batch actions)"
+                style={{fontSize:11,padding:'5px 9px',...(bulkMode?{background:'var(--purple)',color:'#fff',borderColor:'var(--purple)'}:{opacity:.75})}}>
+                {bulkMode?'☑ Bulk on':'☑ Bulk'}
+              </button>
             </div>
 
             <div style={{flex:1}}/>
@@ -2140,6 +2280,45 @@ function App() {
                 <div style={{fontSize:13}}>Adjust search or filters</div>
               </div>
             ):(
+              {/* Bulk action bar (sticky, shown in bulk mode) */}
+              {bulkMode && (
+                <div className="bulk-bar">
+                  <span style={{fontWeight:700,fontSize:13}}>
+                    {selectedBulk.size} selected
+                  </span>
+                  <button onClick={()=>setSelectedBulk(new Set(visibleQuestions.map(q=>q.id)))}>All {visibleQuestions.length}</button>
+                  <button onClick={()=>setSelectedBulk(new Set())} disabled={!selectedBulk.size}>Clear</button>
+                  <div className="bulk-sep"/>
+                  <button onClick={bulkMarkDone} disabled={!selectedBulk.size}>✓ Mark Done</button>
+                  <button onClick={bulkMarkWeak} disabled={!selectedBulk.size}>⚡ Mark Weak</button>
+                  {/* Add-to-collection picker */}
+                  {collections.length>0 && (
+                    <div style={{position:'relative'}}>
+                      <button disabled={!selectedBulk.size}
+                        onClick={e=>{e.currentTarget.nextSibling.style.display=e.currentTarget.nextSibling.style.display==='block'?'none':'block'}}>
+                        📁 Add to… ▾
+                      </button>
+                      <div style={{display:'none',position:'absolute',top:'calc(100% + 6px)',left:0,background:'var(--card)',border:'1px solid var(--border2)',borderRadius:8,minWidth:160,boxShadow:'var(--shadow)',zIndex:100}}>
+                        {collections.map(c=>(
+                          <div key={c.id} onClick={()=>{bulkAddToCollection(c.id);}}
+                            className="dd-item" style={{padding:'8px 12px',fontSize:13,display:'flex',alignItems:'center',gap:8,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
+                            <div style={{width:8,height:8,borderRadius:'50%',background:c.color,flexShrink:0}}/>
+                            {c.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {activeCollId && (
+                    <button onClick={()=>bulkRemoveFromColl(activeCollId)} disabled={!selectedBulk.size}
+                      style={{background:'rgba(240,96,88,.3)',borderColor:'rgba(240,96,88,.5)'}}>
+                      🗑 Remove from collection
+                    </button>
+                  )}
+                  <div style={{flex:1}}/>
+                  <button onClick={()=>{setBulkMode(false);setSelectedBulk(new Set());}}>✕ Exit</button>
+                </div>
+              )}
               <div id="q-list">
                 {visibleQuestions.map((q,i)=>{
                   const qCollections = qCollectionsMap[q.id] || [];
@@ -2162,6 +2341,9 @@ function App() {
                       onToggleLocalOpt={toggleLocalOpt}
                       localExpOverride={localExpOverrides[q.id]}
                       onToggleLocalExp={toggleLocalExp}
+                      bulkMode={bulkMode}
+                      isBulkSelected={selectedBulk.has(q.id)}
+                      onToggleBulk={toggleBulkSelect}
                     />
                   );
                 })}
@@ -2198,7 +2380,15 @@ function App() {
       {tagModal&&<TagEditModal qId={tagModal.qId} question={tagModal.question} currentTag={customTags[tagModal.qId]||''} onSave={saveCustomTag} onClose={()=>setTagModal(null)}/>}
 
       {/* ══ TOAST ══ */}
-      {toast&&<div className="toast" style={{background:toast.type==='error'?'var(--red)':toast.type==='warn'?'var(--yellow)':'var(--green)',color:'#fff'}}>{toast.type==='error'?'⚠':toast.type==='warn'?'⚠':'✓'} {toast.msg}</div>}
+      {toast&&(
+        <div className="toast" style={{background:toast.type==='error'?'var(--red)':toast.type==='warn'?'var(--yellow)':'var(--green)',color:'#fff'}}>
+          <span style={{flex:1}}>{toast.type==='error'?'⚠ ':toast.type==='warn'?'⚠ ':'✓ '}{toast.msg}</span>
+          {toast.undoFn&&(
+            <button className="toast-undo-btn" onClick={()=>{toast.undoFn();dismissToast();}}>↩ Undo</button>
+          )}
+          <button className="toast-x" onClick={dismissToast} title="Dismiss">×</button>
+        </div>
+      )}
 
       {/* Close dropdowns on outside click */}
       {lessonDDOpen&&<div style={{position:'fixed',inset:0,zIndex:50}} onClick={()=>setLessonDDOpen(false)}/>}
