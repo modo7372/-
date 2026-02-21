@@ -4,902 +4,1228 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QnA Hub — Study Intelligence</title>
-
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin></script>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
 <style>
-:root {
-  --bg: #0d0f14;
-  --surface: #141720;
-  --card: #1a1e2a;
-  --card2: #1f2436;
-  --text: #e8eaf0;
-  --muted: #8892a4;
-  --primary: #5b8dee;
-  --primary-glow: rgba(91,141,238,0.18);
-  --green: #3ecf8e;
-  --green-glow: rgba(62,207,142,0.15);
-  --yellow: #f5a623;
-  --yellow-glow: rgba(245,166,35,0.15);
-  --red: #f06058;
-  --border: rgba(255,255,255,0.07);
-  --border2: rgba(255,255,255,0.12);
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 48px rgba(0,0,0,0.6);
-  --font: 'Sora', sans-serif;
-  --mono: 'JetBrains Mono', monospace;
-}
-
-[data-theme="light"] {
-  --bg: #f0f2f7;
-  --surface: #ffffff;
-  --card: #ffffff;
-  --card2: #f7f8fc;
-  --text: #1a1f2e;
-  --muted: #6b7280;
-  --primary: #3b6fd4;
-  --primary-glow: rgba(59,111,212,0.12);
-  --green: #059669;
-  --green-glow: rgba(5,150,105,0.1);
-  --yellow: #d97706;
-  --yellow-glow: rgba(217,119,6,0.1);
-  --red: #dc2626;
-  --border: rgba(0,0,0,0.08);
-  --border2: rgba(0,0,0,0.14);
-  --shadow: 0 2px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
-}
-
-[data-theme="sepia"] {
-  --bg: #f5edd8;
-  --surface: #fffbf2;
-  --card: #fffbf2;
-  --card2: #fdf5e0;
-  --text: #3d2b1f;
-  --muted: #8b7355;
-  --primary: #c0622d;
-  --primary-glow: rgba(192,98,45,0.12);
-  --green: #5a7a3a;
-  --green-glow: rgba(90,122,58,0.12);
-  --yellow: #b8860b;
-  --yellow-glow: rgba(184,134,11,0.1);
-  --red: #a0392a;
-  --border: rgba(0,0,0,0.1);
-  --border2: rgba(0,0,0,0.18);
-  --shadow: 0 2px 12px rgba(0,0,0,0.1);
-  --shadow-lg: 0 4px 24px rgba(0,0,0,0.15);
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  min-height: 100vh;
-  transition: background 0.3s, color 0.3s;
-  overflow-x: hidden;
-}
-
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; opacity: 0.6; }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-@keyframes pulse {
-  0%,100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-@keyframes toastIn {
-  from { opacity: 0; transform: translateY(20px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.animate-fade-up { animation: fadeUp 0.35s ease-out both; }
-.animate-fade-in { animation: fadeIn 0.25s ease-out both; }
-.animate-slide-in { animation: slideIn 0.25s ease-out both; }
-.animate-spin { animation: spin 0.8s linear infinite; }
-.animate-pulse { animation: pulse 1.5s ease-in-out infinite; }
-
-/* Stagger utility */
-.stagger > * { animation: fadeUp 0.3s ease-out both; }
-.stagger > *:nth-child(1) { animation-delay: 0.03s; }
-.stagger > *:nth-child(2) { animation-delay: 0.06s; }
-.stagger > *:nth-child(3) { animation-delay: 0.09s; }
-.stagger > *:nth-child(4) { animation-delay: 0.12s; }
-.stagger > *:nth-child(5) { animation-delay: 0.15s; }
-.stagger > *:nth-child(n+6) { animation-delay: 0.18s; }
-
-/* Glassmorphism card */
-.glass {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-/* Pill */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-/* Btn */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid var(--border2);
-  background: var(--card2);
-  color: var(--text);
-  transition: all 0.2s;
-  white-space: nowrap;
-  font-family: var(--font);
-}
-.btn:hover { background: var(--surface); border-color: var(--primary); color: var(--primary); }
-.btn.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
-.btn.btn-primary:hover { opacity: 0.88; }
-.btn.btn-ghost { background: transparent; border-color: transparent; }
-.btn.btn-ghost:hover { background: var(--card2); border-color: var(--border); color: var(--primary); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-/* Input */
-.input {
-  background: var(--card2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 14px;
-  padding: 8px 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
-  width: 100%;
-}
-.input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
-.input::placeholder { color: var(--muted); }
-
-/* Tab */
-.tab-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-  white-space: nowrap;
-  font-family: var(--font);
-}
-.tab-btn:hover { color: var(--text); background: var(--card2); }
-.tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 12px var(--primary-glow); }
-.tab-btn.active-unsolved { background: var(--yellow); color: #fff; box-shadow: 0 2px 12px var(--yellow-glow); }
-.tab-btn.active-fav { background: var(--yellow); color: #fff; }
-
-/* Tag chip */
-.tag-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--card2);
-  border: 1px solid var(--border2);
-  color: var(--muted);
-}
-
-/* Progress bar */
-.progress-bar {
-  height: 6px;
-  background: var(--card2);
-  border-radius: 3px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.progress-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.5s cubic-bezier(.4,0,.2,1);
-}
-
-/* Stat card */
-.stat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.stat-num { font-size: 28px; font-weight: 800; line-height: 1; }
-.stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
-
-/* Option rows */
-.opt-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--card2);
-  font-size: 14px;
-  transition: background 0.15s;
-}
-.opt-row.correct { background: var(--green-glow); border-color: var(--green); color: var(--green); }
-.opt-row.selected-wrong { background: rgba(240,96,88,0.12); border-color: var(--red); color: var(--red); }
-
-/* Practice mode */
-.quiz-btn {
-  padding: 12px 20px;
-  border-radius: 8px;
-  border: 2px solid var(--border2);
-  background: var(--card2);
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
-  font-family: var(--font);
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-  width: 100%;
-}
-.quiz-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-glow); }
-.quiz-btn.correct { border-color: var(--green); background: var(--green-glow); color: var(--green); font-weight: 600; }
-.quiz-btn.wrong { border-color: var(--red); background: rgba(240,96,88,0.12); color: var(--red); }
-.quiz-btn:disabled { cursor: default; }
-
-/* Report */
-.report-section { margin-bottom: 28px; }
-.report-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
-
-/* Dropdown */
-.dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 100%;
-  background: var(--card);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  z-index: 100;
-  overflow: hidden;
-  animation: fadeUp 0.15s ease-out;
-  max-height: 320px;
-  overflow-y: auto;
-}
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-.dropdown-item:hover { background: var(--card2); }
-
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 28px;
-  right: 28px;
-  z-index: 9999;
-  padding: 12px 20px;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  animation: toastIn 0.3s ease-out;
-  max-width: 320px;
-}
-
-/* Section splitter */
-.section-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 8px 0;
-}
-
-/* Mono ID badge */
-.id-badge {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 5px;
-  background: var(--primary-glow);
-  color: var(--primary);
-  border: 1px solid var(--primary);
-  font-weight: 500;
-}
-
-/* Scrollable pill row */
-.pill-row {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-.pill-row::-webkit-scrollbar { height: 3px; }
-
-/* Upload zone */
-.upload-zone {
-  border: 2px dashed var(--border2);
-  border-radius: var(--radius);
-  padding: 40px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-.upload-zone:hover, .upload-zone.drag-over {
-  border-color: var(--primary);
-  background: var(--primary-glow);
-}
-
-/* Compact question card */
-.q-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: border-color 0.2s, box-shadow 0.2s;
-  overflow: hidden;
-}
-.q-card:hover { border-color: var(--border2); }
-.q-card.completed { border-left: 3px solid var(--green); opacity: 0.85; }
-.q-card.unsolved { border-left: 3px solid var(--yellow); }
-
-/* Tooltip */
-.tooltip-wrap { position: relative; }
-.tooltip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--text);
-  color: var(--bg);
-  padding: 4px 8px;
-  border-radius: 5px;
-  font-size: 11px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 999;
-}
-.tooltip-wrap:hover .tooltip { display: block; }
-
-/* Sidebar overlay */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 200;
-  animation: fadeIn 0.2s;
-}
-.sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 360px;
-  max-width: 95vw;
-  height: 100vh;
-  background: var(--surface);
-  border-left: 1px solid var(--border2);
-  z-index: 201;
-  overflow-y: auto;
-  animation: slideIn 0.25s ease-out;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Header */
-.header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  padding: 0 24px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .sidebar { width: 100vw; }
-  .header { padding: 0 14px; }
-  .toast { right: 14px; bottom: 14px; }
-}
-
-/* Shimmer loading */
-.shimmer {
-  background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
-  background-size: 200% auto;
-  animation: shimmer 1.5s linear infinite;
-  border-radius: 6px;
-}
-
-/* Modal */
-.modal-bg {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  animation: fadeIn 0.2s;
-}
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 16px;
-  width: 100%;
-  max-width: 720px;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 28px;
-  box-shadow: var(--shadow-lg);
-  animation: fadeUp 0.25s ease-out;
-}
-
-/* Note textarea */
-.note-area {
-  background: var(--card2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 10px;
-  resize: vertical;
-  min-height: 70px;
-  width: 100%;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.note-area:focus { border-color: var(--primary); }
-
-/* Progress ring */
-.ring { transform: rotate(-90deg); }
-
-/* Table */
-table.report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-table.report-table th { text-align: left; padding: 8px 12px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid var(--border2); }
-table.report-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
-table.report-table tr:last-child td { border-bottom: none; }
-
-/* Highlight search match */
-mark { background: var(--primary-glow); color: var(--primary); border-radius: 3px; padding: 0 2px; font-weight: 700; }
+:root{--bg:#0d0f14;--surface:#141720;--card:#1a1e2a;--card2:#1f2436;--text:#e8eaf0;--muted:#8892a4;--primary:#5b8dee;--pg:rgba(91,141,238,.18);--green:#3ecf8e;--gg:rgba(62,207,142,.15);--yellow:#f5a623;--yg:rgba(245,166,35,.15);--red:#f06058;--rg:rgba(240,96,88,.12);--purple:#a78bfa;--pug:rgba(167,139,250,.15);--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);--r:12px;--rs:8px;--shadow:0 4px 24px rgba(0,0,0,.4);--shadowl:0 8px 48px rgba(0,0,0,.6);--font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace}
+[data-theme=light]{--bg:#f0f2f7;--surface:#fff;--card:#fff;--card2:#f7f8fc;--text:#1a1f2e;--muted:#6b7280;--primary:#3b6fd4;--pg:rgba(59,111,212,.12);--green:#059669;--gg:rgba(5,150,105,.1);--yellow:#d97706;--yg:rgba(217,119,6,.1);--red:#dc2626;--rg:rgba(220,38,38,.1);--purple:#7c3aed;--pug:rgba(124,58,237,.1);--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);--shadow:0 2px 12px rgba(0,0,0,.08);--shadowl:0 4px 24px rgba(0,0,0,.12)}
+[data-theme=sepia]{--bg:#f5edd8;--surface:#fffbf2;--card:#fffbf2;--card2:#fdf5e0;--text:#3d2b1f;--muted:#8b7355;--primary:#c0622d;--pg:rgba(192,98,45,.12);--green:#5a7a3a;--gg:rgba(90,122,58,.12);--yellow:#b8860b;--yg:rgba(184,134,11,.1);--red:#a0392a;--rg:rgba(160,57,42,.1);--purple:#7c3aed;--pug:rgba(124,58,237,.1);--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.18);--shadow:0 2px 12px rgba(0,0,0,.1);--shadowl:0 4px 24px rgba(0,0,0,.15)}
+[data-theme=forest]{--bg:#0f1a12;--surface:#152018;--card:#1a2a1d;--card2:#1f3022;--text:#d4e8d4;--muted:#6b9a6b;--primary:#4caf6e;--pg:rgba(76,175,110,.18);--green:#4caf6e;--gg:rgba(76,175,110,.18);--yellow:#c8a030;--yg:rgba(200,160,48,.15);--red:#e05a4a;--rg:rgba(224,90,74,.12);--purple:#8b7fd4;--pug:rgba(139,127,212,.15);--border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.11);--shadow:0 4px 24px rgba(0,0,0,.45);--shadowl:0 8px 48px rgba(0,0,0,.65)}
+[data-theme=ocean]{--bg:#040d1a;--surface:#071525;--card:#0c1e35;--card2:#102440;--text:#c8e0f4;--muted:#5b8aaa;--primary:#38bdf8;--pg:rgba(56,189,248,.15);--green:#34d399;--gg:rgba(52,211,153,.13);--yellow:#fbbf24;--yg:rgba(251,191,36,.13);--red:#f87171;--rg:rgba(248,113,113,.12);--purple:#a78bfa;--pug:rgba(167,139,250,.14);--border:rgba(56,189,248,.08);--border2:rgba(56,189,248,.15);--shadow:0 4px 28px rgba(0,0,0,.5);--shadowl:0 8px 56px rgba(0,0,0,.7)}
+[data-theme=rose]{--bg:#1a0a0f;--surface:#220e16;--card:#2a1220;--card2:#31162a;--text:#f4d0db;--muted:#9a6070;--primary:#f43f8e;--pg:rgba(244,63,142,.15);--green:#4ade80;--gg:rgba(74,222,128,.13);--yellow:#fbbf24;--yg:rgba(251,191,36,.13);--red:#f87171;--rg:rgba(248,113,113,.12);--purple:#c084fc;--pug:rgba(192,132,252,.15);--border:rgba(244,63,142,.08);--border2:rgba(244,63,142,.15);--shadow:0 4px 24px rgba(0,0,0,.5);--shadowl:0 8px 48px rgba(0,0,0,.7)}
+[data-theme=slate]{--bg:#f8fafc;--surface:#fff;--card:#fff;--card2:#f1f5f9;--text:#0f172a;--muted:#64748b;--primary:#6366f1;--pg:rgba(99,102,241,.12);--green:#10b981;--gg:rgba(16,185,129,.1);--yellow:#f59e0b;--yg:rgba(245,158,11,.1);--red:#ef4444;--rg:rgba(239,68,68,.1);--purple:#8b5cf6;--pug:rgba(139,92,246,.1);--border:rgba(0,0,0,.07);--border2:rgba(0,0,0,.12);--shadow:0 1px 8px rgba(0,0,0,.06);--shadowl:0 4px 24px rgba(0,0,0,.1)}
+[data-theme=amber]{--bg:#1c1400;--surface:#261c00;--card:#2e2200;--card2:#362800;--text:#fef3c7;--muted:#92700a;--primary:#f59e0b;--pg:rgba(245,158,11,.18);--green:#65a30d;--gg:rgba(101,163,13,.14);--yellow:#f59e0b;--yg:rgba(245,158,11,.18);--red:#dc2626;--rg:rgba(220,38,38,.12);--purple:#a78bfa;--pug:rgba(167,139,250,.14);--border:rgba(245,158,11,.08);--border2:rgba(245,158,11,.15);--shadow:0 4px 24px rgba(0,0,0,.5);--shadowl:0 8px 48px rgba(0,0,0,.65)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .3s,color .3s;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--primary);border-radius:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideR{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes countdown{from{stroke-dashoffset:0}to{stroke-dashoffset:283}}
+@keyframes copyPop{0%{transform:scale(1)}30%{transform:scale(1.25)}60%{transform:scale(.92)}100%{transform:scale(1)}}
+@keyframes fadeCheck{0%{opacity:0;transform:translateY(4px) scale(.8)}40%{opacity:1;transform:translateY(0) scale(1.1)}100%{opacity:0;transform:translateY(-6px) scale(.9)}}
+.afu{animation:fadeUp .3s ease-out both}.afi{animation:fadeIn .25s ease-out both}.animate-spin{animation:spin .8s linear infinite}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--card2);color:var(--text);transition:all .2s;white-space:nowrap;font-family:var(--font)}
+.btn:hover{background:var(--surface);border-color:var(--primary);color:var(--primary)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.primary:hover{opacity:.88}
+.btn.ghost{background:transparent;border-color:transparent}.btn.ghost:hover{background:var(--card2);border-color:var(--border);color:var(--primary)}
+.btn.danger{background:var(--rg);border-color:var(--red);color:var(--red)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.input{background:var(--card2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:var(--font);font-size:14px;padding:8px 12px;transition:border-color .2s,box-shadow .2s;outline:none;width:100%}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--pg)}.input::placeholder{color:var(--muted)}
+.tab-btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;background:transparent;color:var(--muted);display:flex;align-items:center;gap:6px;transition:all .2s;white-space:nowrap;font-family:var(--font)}
+.tab-btn:hover{color:var(--text);background:var(--card2)}.tab-btn.active{background:var(--primary);color:#fff;box-shadow:0 2px 12px var(--pg)}
+.tab-btn.act-y{background:var(--yellow);color:#fff;box-shadow:0 2px 12px var(--yg)}.tab-btn.act-g{background:var(--green);color:#fff}
+.tab-btn.act-p{background:var(--purple);color:#fff;box-shadow:0 2px 12px var(--pug)}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600;background:var(--card2);border:1px solid var(--border2);color:var(--muted);cursor:default}
+.tag-chip.pin{background:var(--yg);border-color:var(--yellow);color:var(--yellow)}
+.tag-chip.weak{background:var(--rg);border-color:var(--red);color:var(--red)}
+.tag-chip.due{background:var(--pug);border-color:var(--purple);color:var(--purple)}
+.pb{height:6px;background:var(--card2);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+.pb-fill{height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;display:flex;flex-direction:column;gap:4px}
+.stat-num{font-size:26px;font-weight:800;line-height:1}.stat-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.opt-row{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card2);font-size:14px;transition:background .15s}
+.opt-row.correct{background:var(--gg);border-color:var(--green);color:var(--green)}.opt-row.wrong-sel{background:var(--rg);border-color:var(--red);color:var(--red)}
+.quiz-btn{padding:12px 20px;border-radius:8px;border:2px solid var(--border2);background:var(--card2);color:var(--text);font-size:14px;font-weight:500;font-family:var(--font);cursor:pointer;transition:all .2s;text-align:left;width:100%}
+.quiz-btn:hover:not(:disabled){border-color:var(--primary);color:var(--primary);background:var(--pg)}
+.quiz-btn.correct{border-color:var(--green);background:var(--gg);color:var(--green);font-weight:600}
+.quiz-btn.wrong{border-color:var(--red);background:var(--rg);color:var(--red)}.quiz-btn:disabled{cursor:default}
+.conf-btn{flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--border2);background:var(--card2);color:var(--text);font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .2s;text-align:center}
+.conf-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.conf-btn.again{border-color:var(--red);color:var(--red);background:var(--rg)}
+.conf-btn.hard{border-color:var(--yellow);color:var(--yellow);background:var(--yg)}
+.conf-btn.good{border-color:var(--primary);color:var(--primary);background:var(--pg)}
+.conf-btn.easy{border-color:var(--green);color:var(--green);background:var(--gg)}
+.dropdown{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);box-shadow:var(--shadowl);z-index:100;overflow:hidden;animation:fadeUp .15s ease-out;max-height:320px;overflow-y:auto}
+.dd-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;cursor:pointer;transition:background .1s}
+.dd-item:hover{background:var(--card2)}
+.toast{position:fixed;bottom:28px;right:28px;z-index:9999;padding:12px 20px;border-radius:var(--r);font-size:13px;font-weight:600;box-shadow:var(--shadowl);display:flex;align-items:center;gap:8px;animation:toastIn .3s ease-out;max-width:340px}
+.id-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;background:var(--pg);color:var(--primary);border:1px solid var(--primary);font-weight:500}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:50px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--primary);background:var(--pg)}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s;overflow:hidden}
+.q-card:hover{border-color:var(--border2)}.q-card.done{border-left:3px solid var(--green);opacity:.85}
+.q-card.pinned{border-left:3px solid var(--yellow)}.q-card.weak-card{border-left:3px solid var(--red)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:var(--shadowl);animation:fadeUp .25s ease-out}
+.note-area{background:var(--card2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:var(--mono);font-size:12px;padding:10px;resize:vertical;min-height:80px;width:100%;outline:none;transition:border-color .2s}
+.note-area:focus{border-color:var(--primary)}
+table.rt{width:100%;border-collapse:collapse;font-size:13px}
+table.rt th{text-align:left;padding:8px 12px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border2)}
+table.rt td{padding:10px 12px;border-bottom:1px solid var(--border)}
+table.rt tr:last-child td{border-bottom:none}
+mark{background:var(--pg);color:var(--primary);border-radius:3px;padding:0 2px;font-weight:700}
+.shimmer{background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);background-size:200% auto;animation:shimmer 1.5s linear infinite;border-radius:6px}
+.kbd{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:4px;background:var(--card2);border:1px solid var(--border2);font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);min-width:20px}
+/* Reading progress rail */
+#read-rail{position:fixed;right:0;top:0;width:4px;height:100vh;background:var(--border);z-index:999;pointer-events:none}
+#read-fill{width:100%;background:var(--primary);transition:height .1s linear;border-radius:2px}
+/* Streak heatmap */
+.heat-cell{width:12px;height:12px;border-radius:2px;transition:background .2s}
+/* Countdown ring */
+.timer-ring{transform:rotate(-90deg)}.timer-txt{font-size:24px;font-weight:800;font-family:var(--mono)}
+/* Collection badge */
+.coll-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;border:1px solid;cursor:pointer}
+/* Shortcut panel */
+.sk-row{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.sk-row:last-child{border-bottom:none}
 </style>
 </head>
 <body>
+<div id="read-rail"><div id="read-fill"></div></div>
 <div id="root"></div>
-
 <script type="text/babel">
 const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 
-// ==================== CONFIG ====================
+// ═══════════════════════════════ CONFIG ═══════════════════════════════
 const AVAILABLE_FILES = [
-  " Infections.txt"
-  // Add more files here
+  "Infections-Raihana Med ريحانة الطdب.txt"
 ];
-const STORAGE_KEY_PREFIX = "qna_hub_v3_";
-const VIRTUALIZE_THRESHOLD = 80; // virtualize when > N visible items
+const SK = "qna4_"; // storage key prefix
 
-// ==================== UTILS ====================
-const esc = (s) => String(s).replace(/</g,"&lt;").replace(/>/g,"&gt;");
+// ═══════════════════════════════ STORAGE ═══════════════════════════════
+const save = (k, v) => { try { localStorage.setItem(SK+k, JSON.stringify(v)); } catch{} };
+const load = (k, fb) => { try { const r=localStorage.getItem(SK+k); return r!=null?JSON.parse(r):fb; } catch{ return fb; }};
 
-function debounce(fn, ms) {
-  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+// ═══════════════════════════════ SM-2 ═══════════════════════════════
+// quality: 0=Again, 1=Hard, 2=Good, 3=Easy
+function sm2(card, quality) {
+  let { interval=1, easeFactor=2.5, repetitions=0 } = card || {};
+  const q = quality; // 0-3 → map to SM-2 q 0-5
+  const smQ = [0, 2, 4, 5][q];
+  if (smQ < 3) {
+    repetitions = 0; interval = 1;
+  } else {
+    if (repetitions === 0) interval = 1;
+    else if (repetitions === 1) interval = 6;
+    else interval = Math.round(interval * easeFactor);
+    repetitions++;
+  }
+  easeFactor = Math.max(1.3, easeFactor + 0.1 - (5-smQ)*(0.08+(5-smQ)*0.02));
+  const nextDue = Date.now() + interval * 86400000;
+  return { interval, easeFactor, repetitions, nextDue, lastReviewed: Date.now() };
 }
 
-function highlight(text, query) {
-  if (!query || !text) return text;
-  const safe = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function isDue(card) {
+  if (!card || !card.nextDue) return false;
+  return Date.now() >= card.nextDue;
+}
+
+const THEMES = [
+  { id:'dark',    label:'🌑 Dark',    icon:'🌑' },
+  { id:'light',   label:'☀️ Light',   icon:'☀️' },
+  { id:'sepia',   label:'📜 Sepia',   icon:'📜' },
+  { id:'forest',  label:'🌿 Forest',  icon:'🌿' },
+  { id:'ocean',   label:'🌊 Ocean',   icon:'🌊' },
+  { id:'rose',    label:'🌸 Rose',    icon:'🌸' },
+  { id:'slate',   label:'🪨 Slate',   icon:'🪨' },
+  { id:'amber',   label:'🟡 Amber',   icon:'🟡' },
+];
+
+// ═══════════════════════════════ PARSER ═══════════════════════════════
+function parseTextData(text) {
+  const lines = text.split('\n');
+  const parsed = []; let id = 1;
+  const lessons = new Set();
+  let sep = '\t';
+  const sm = text.match(/#separator:(.+)/);
+  if (sm) { const s=sm[1].trim(); sep = s==='tab'?'\t':s==='comma'?',':s; }
+  let tagCol = -1;
+  const tm = text.match(/#tags column:(\d+)/i);
+  if (tm) tagCol = parseInt(tm[1],10)-1;
+
+  for (const line of lines) {
+    if (!line.trim()||line.startsWith('#')) continue;
+    const cols = line.split(sep);
+    if (cols.length < 2) continue;
+    let lesson='General', qText=cols[0].trim(), optStart=1;
+    const c0=cols[0].trim();
+    if (cols.length>=3&&(c0.includes('::')||/page\s*\d+/i.test(c0)||/mcq/i.test(c0)||/tropical/i.test(c0)||/infections/i.test(c0))) {
+      lesson=c0; qText=cols[1]?cols[1].trim():'Unknown'; optStart=2;
+    }
+    lessons.add(lesson);
+    let options=[],answerKey='',answerText='',explanation='',tag='';
+    if (tagCol!==-1&&cols.length>tagCol&&cols[tagCol].trim()) { tag=cols[tagCol].trim(); cols[tagCol]=''; }
+    let ai=-1;
+    for (let c=optStart;c<cols.length;c++) { if (/^[A-E]$/i.test(cols[c].trim())) { ai=c; break; } }
+    if (ai!==-1) {
+      for (let c=optStart;c<ai;c++) if (cols[c].trim()) options.push(cols[c].trim());
+      answerKey=cols[ai].trim().toUpperCase();
+      answerText=cols[ai+1]?cols[ai+1].trim():'';
+      let rem=cols.slice(ai+2).map(c=>c.trim());
+      if (!tag) { let li=-1; for (let k=rem.length-1;k>=0;k--) if(rem[k]){li=k;break;} if(li!==-1){tag=rem[li];rem[li]='';} }
+      const ep=rem.filter(c=>c); if(ep.length) explanation=ep.join(' | ');
+    } else {
+      options=cols.slice(optStart,cols.length-2).filter(c=>c.trim());
+      answerText=cols[cols.length-2]?cols[cols.length-2].trim():'';
+      if (!tag) tag=cols[cols.length-1]?cols[cols.length-1].trim():'';
+      else explanation=cols[cols.length-1]?cols[cols.length-1].trim():'';
+    }
+    if (!qText) continue;
+    parsed.push({ id:id++, lesson, question:qText, options, answerKey, answerText, explanation, tag });
+  }
+  return { parsed, lessons: Array.from(lessons) };
+}
+
+// ═══════════════════════════════ HIGHLIGHT ═══════════════════════════════
+function hl(text, q) {
+  if (!q||!text) return text;
+  const safe = q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   try {
-    const re = new RegExp(`(${safe})`, 'gi');
-    const parts = text.split(re);
-    return parts.map((p, i) => re.test(p) ? <mark key={i}>{p}</mark> : p);
+    const re = new RegExp(`(${safe})`,'gi');
+    return text.split(re).map((p,i) => new RegExp(safe,'i').test(p) ? <mark key={i}>{p}</mark> : p);
   } catch { return text; }
 }
 
-function saveLocal(key, data) {
-  try { localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(data)); } catch {}
-}
-function loadLocal(key, fallback) {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_PREFIX + key);
-    return raw != null ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
-}
-
-// ==================== ICONS ====================
+// ═══════════════════════════════ ICONS ═══════════════════════════════
 const I = {
-  Search: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>,
-  Upload: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>,
-  Copy: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
-  File: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
-  Download: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-  Eye: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  EyeOff: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
-  Star: ({filled}) => <svg width="16" height="16" viewBox="0 0 24 24" fill={filled?"currentColor":"none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{color: filled ? "var(--yellow)" : "var(--muted)"}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  Check: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-  CheckCircle: ({size=16}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"var(--green)"}}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01" stroke="white" strokeWidth="2.5"/></svg>,
-  Circle: ({size=16}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"var(--muted)"}}><circle cx="12" cy="12" r="10"/></svg>,
-  Loader: () => <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>,
-  Filter: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
-  Tag: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
-  ChevronDown: ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>,
-  ChevronUp: ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>,
-  X: ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-  List: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>,
-  BarChart: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>,
-  Brain: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2a2.5 2.5 0 015 0v.5a2.5 2.5 0 01-5 0V2zM12 4.5v15m-4.5-9.5a2.5 2.5 0 00-2.5 2.5v.5a2.5 2.5 0 002.5 2.5M7.5 10a4.5 4.5 0 00-4.5 4.5M16.5 10a2.5 2.5 0 012.5 2.5v.5a2.5 2.5 0 01-2.5 2.5M16.5 10a4.5 4.5 0 014.5 4.5"/></svg>,
-  Question: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  Note: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
-  Shuffle: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>,
-  Settings: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
-  Moon: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>,
-  Sun: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
-  Warning: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  Search:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>,
+  Upload:()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>,
+  Copy:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
+  Download:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  Eye:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  EyeOff:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
+  Star:({f})=><svg width="15" height="15" viewBox="0 0 24 24" fill={f?"currentColor":"none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{color:f?"var(--yellow)":"var(--muted)"}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  Check:({size=13})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  CheckCircle:({size=16})=><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"var(--green)"}}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01" stroke="white" strokeWidth="2.5"/></svg>,
+  Circle:({size=16})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"var(--muted)"}}><circle cx="12" cy="12" r="10"/></svg>,
+  Loader:()=><svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>,
+  Filter:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  Tag:()=><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+  Cd:({s=13})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>,
+  Cu:({s=13})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>,
+  X:({s=13})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  List:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>,
+  Chart:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>,
+  Brain:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2a2.5 2.5 0 015 0v.5a2.5 2.5 0 01-5 0V2zM12 4.5v15m-4.5-9.5a2.5 2.5 0 00-2.5 2.5v.5a2.5 2.5 0 002.5 2.5M7.5 10a4.5 4.5 0 00-4.5 4.5M16.5 10a2.5 2.5 0 012.5 2.5v.5a2.5 2.5 0 01-2.5 2.5M16.5 10a4.5 4.5 0 014.5 4.5"/></svg>,
+  Note:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  Pin:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>,
+  Keyboard:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>,
+  Folder:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>,
+  Clock:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Flame:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 01-7 7 7 7 0 01-7-7c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/></svg>,
+  Moon:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>,
+  Sun:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  Warn:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  Share:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+  Zap:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
 };
 
-// ==================== PARSER ====================
-function parseTextData(text) {
-  const lines = text.split('\n');
-  const parsed = [];
-  let idCounter = 1;
-  const uniqueLessons = new Set();
-
-  let separator = '\t';
-  const sepMatch = text.match(/#separator:(.+)/);
-  if (sepMatch) {
-    const s = sepMatch[1].trim();
-    separator = s === 'tab' ? '\t' : s === 'comma' ? ',' : s;
-  }
-
-  let explicitTagCol = -1;
-  const tagColMatch = text.match(/#tags column:(\d+)/i);
-  if (tagColMatch) explicitTagCol = parseInt(tagColMatch[1], 10) - 1;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim() || line.startsWith('#')) continue;
-
-    const cols = line.split(separator);
-    if (cols.length < 2) continue;
-
-    let lesson = "General";
-    let qText = cols[0].trim();
-    let optStartIndex = 1;
-
-    const col0 = cols[0].trim();
-    if (cols.length >= 3 && (
-      col0.includes('::') ||
-      /page\s*\d+/i.test(col0) ||
-      /mcq/i.test(col0) ||
-      /tropical/i.test(col0) ||
-      /infections/i.test(col0)
-    )) {
-      lesson = col0;
-      qText = cols[1] ? cols[1].trim() : "Unknown";
-      optStartIndex = 2;
-    }
-
-    uniqueLessons.add(lesson);
-
-    let options = [], answerKey = '', answerText = '', explanation = '', tag = '';
-
-    if (explicitTagCol !== -1 && cols.length > explicitTagCol && cols[explicitTagCol].trim()) {
-      tag = cols[explicitTagCol].trim();
-      cols[explicitTagCol] = '';
-    }
-
-    let ansIndex = -1;
-    for (let c = optStartIndex; c < cols.length; c++) {
-      const val = cols[c].trim().toUpperCase();
-      if (/^[A-E]$/.test(val)) { ansIndex = c; break; }
-    }
-
-    if (ansIndex !== -1) {
-      for (let c = optStartIndex; c < ansIndex; c++) {
-        if (cols[c].trim()) options.push(cols[c].trim());
-      }
-      answerKey = cols[ansIndex].trim();
-      answerText = cols[ansIndex + 1] ? cols[ansIndex + 1].trim() : '';
-      let remaining = cols.slice(ansIndex + 2).map(c => c.trim());
-
-      if (!tag) {
-        let lastIdx = -1;
-        for (let k = remaining.length - 1; k >= 0; k--) {
-          if (remaining[k]) { lastIdx = k; break; }
-        }
-        if (lastIdx !== -1) { tag = remaining[lastIdx]; remaining[lastIdx] = ''; }
-      }
-      const explParts = remaining.filter(c => c);
-      if (explParts.length > 0) explanation = explParts.join(" | ");
-    } else {
-      options = cols.slice(optStartIndex, cols.length - 2).filter(c => c.trim());
-      answerText = cols[cols.length - 2] ? cols[cols.length - 2].trim() : '';
-      if (!tag) tag = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
-      else explanation = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
-    }
-
-    if (!qText) continue;
-
-    parsed.push({ id: idCounter++, lesson, question: qText, options, answerKey, answerText, explanation, tag });
-  }
-
-  return { parsed, lessons: Array.from(uniqueLessons) };
-}
-
-// ==================== VIRTUAL LIST ====================
-function VirtualList({ items, renderItem, itemHeight = 200, overscan = 5, containerStyle = {} }) {
-  const containerRef = useRef(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(600);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    setContainerHeight(el.clientHeight || 600);
-
-    const handleScroll = () => setScrollTop(el.scrollTop);
-    const handleResize = () => setContainerHeight(el.clientHeight);
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleResize);
-    return () => { el.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', handleResize); };
-  }, []);
-
-  const totalHeight = items.length * itemHeight;
-  const startIdx = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
-  const endIdx = Math.min(items.length - 1, Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan);
-
-  const visibleItems = [];
-  for (let i = startIdx; i <= endIdx; i++) {
-    visibleItems.push(
-      <div key={items[i].id} style={{ position: 'absolute', top: i * itemHeight, left: 0, right: 0, minHeight: itemHeight }}>
-        {renderItem(items[i], i)}
-      </div>
-    );
-  }
-
+// ═══════════════════════════════ KEYBOARD SHORTCUTS PANEL ═══════════════════════════════
+function ShortcutsPanel({ onClose }) {
+  const groups = [
+    { title: 'Navigation', items: [
+      ['J / ↓', 'Next question'], ['K / ↑', 'Previous question'],
+      ['G G', 'Jump to top'], ['Shift+G', 'Jump to bottom'],
+      ['Ctrl+F', 'Focus search'], ['Escape', 'Close modal / clear search'],
+    ]},
+    { title: 'Current Question', items: [
+      ['Space', 'Expand / collapse current'],
+      ['F', 'Toggle favorite'], ['D', 'Mark done / undone'],
+      ['P', 'Pin / unpin question'], ['N', 'Open note editor'],
+      ['Opts btn', 'Per-card options show/hide (cycles: global → show → hide)'],
+      ['Exp btn', 'Per-card explanation show/hide'],
+      ['Ans btn', 'Per-card answer show/hide'],
+      ['Copy btn', 'Copy question + answer to clipboard (shows ✓ animation)'],
+    ]},
+    { title: 'Global', items: [
+      ['Ctrl+K', 'Show keyboard shortcuts'], ['Ctrl+R', 'Open report'],
+      ['Ctrl+P', 'Start practice mode'], ['Ctrl+E', 'Start exam simulator'],
+      ['Ctrl+A', 'Toggle ALL answers globally (resets per-card overrides)'],
+      ['Ctrl+/', 'Toggle compact mode'], ['T', 'Cycle theme'],
+    ]},
+  ];
   return (
-    <div ref={containerRef} style={{ overflowY: 'auto', height: '100%', ...containerStyle }}>
-      <div style={{ position: 'relative', height: totalHeight }}>
-        {visibleItems}
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <div style={{fontWeight:800,fontSize:17,display:'flex',alignItems:'center',gap:8}}><I.Keyboard/> Keyboard Shortcuts</div>
+          <button className="btn ghost" onClick={onClose} style={{padding:'4px 8px'}}><I.X s={15}/></button>
+        </div>
+        {groups.map(g => (
+          <div key={g.title} style={{marginBottom:20}}>
+            <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',marginBottom:8}}>{g.title}</div>
+            {g.items.map(([key, desc]) => (
+              <div key={key} className="sk-row">
+                <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                  {key.split(' ').map((k,i) => <span key={i} className="kbd">{k}</span>)}
+                </div>
+                <span style={{fontSize:13,color:'var(--muted)'}}>{desc}</span>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ==================== QUESTION CARD ====================
-const QuestionCard = memo(function QuestionCard({
-  q, isCollapsed, isFavorite, isCompleted, isUnsolved,
-  displaySettings, searchQuery,
-  onToggleCollapse, onToggleFavorite, onToggleCompleted,
-  onOpenNote, noteText, compact,
-}) {
-  // Per-card answer visibility: null = follow global, true = force show, false = force hide
-  const [localAnswer, setLocalAnswer] = useState(null);
-  const showAnswerEffective = localAnswer !== null ? localAnswer : displaySettings.showAnswer;
+// ═══════════════════════════════ COLLECTIONS MODAL ═══════════════════════════════
 
-  const hl = (text) => highlight(text, searchQuery);
+// Resolve a single atomic query segment (no ; or &)
+function resolveAtom(q, questions) {
+  const matched = new Set();
+  if (!q) return matched;
+
+  // ── Field-specific: q:text, ans:text, exp:text, tag:text, lesson:text ──
+  const fieldM = q.match(/^(q|question|ans|answer|exp|explanation|tag|lesson|options?):(.+)$/i);
+  if (fieldM) {
+    const field = fieldM[1].toLowerCase();
+    const term = fieldM[2].trim().toLowerCase();
+    questions.forEach(qq => {
+      let hay = '';
+      if (field==='q'||field==='question') hay = qq.question||'';
+      else if (field==='ans'||field==='answer') hay = [qq.answerKey,qq.answerText].filter(Boolean).join(' ');
+      else if (field==='exp'||field==='explanation') hay = qq.explanation||'';
+      else if (field==='tag') hay = [qq.tag].filter(Boolean).join(' ');
+      else if (field==='lesson') hay = qq.lesson||'';
+      else if (field==='option'||field==='options') hay = (qq.options||[]).join(' ');
+      if (hay.toLowerCase().includes(term)) matched.add(qq.id);
+    });
+    return matched;
+  }
+
+  // ── "keyword IN range"  e.g. "fever IN 1-50" or "malaria IN 20,30,45" ──
+  const inM = q.match(/^(.+?)\s+IN\s+(.+)$/i);
+  if (inM) {
+    const keyPart = inM[1].trim();
+    const scopePart = inM[2].trim();
+    const scope = resolveAtom(scopePart, questions);
+    const kw = keyPart.toLowerCase();
+    questions.forEach(qq => {
+      if (!scope.has(qq.id)) return;
+      const hay = [qq.question, qq.answerText, qq.explanation, qq.tag, ...(qq.options||[])].filter(Boolean).join(' ').toLowerCase();
+      if (hay.includes(kw)) matched.add(qq.id);
+    });
+    return matched;
+  }
+
+  // ── Range: "1-30" ──
+  const rangeM = q.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (rangeM) {
+    const lo = parseInt(rangeM[1]), hi = parseInt(rangeM[2]);
+    questions.forEach(qq => { if (qq.id >= lo && qq.id <= hi) matched.add(qq.id); });
+    return matched;
+  }
+
+  // ── ID list: "44, 45, 100" ──
+  if (/^[\d\s,]+$/.test(q)) {
+    const ids = q.split(/[\s,]+/).map(Number).filter(Boolean);
+    questions.forEach(qq => { if (ids.includes(qq.id)) matched.add(qq.id); });
+    return matched;
+  }
+
+  // ── Keyword / full-text search ──
+  const lo = q.toLowerCase();
+  questions.forEach(qq => {
+    const hay = [qq.question, qq.answerText, qq.explanation, qq.tag, ...(qq.options||[])].filter(Boolean).join(' ').toLowerCase();
+    if (hay.includes(lo)) matched.add(qq.id);
+  });
+  return matched;
+}
+
+function resolveQuery(query, questions) {
+  const q = query.trim();
+  if (!q) return new Set();
+  const matched = new Set();
+
+  // Union (OR): semicolon separates parts
+  if (q.includes(';')) {
+    for (const part of q.split(';')) {
+      for (const id of resolveQuery(part.trim(), questions)) matched.add(id);
+    }
+    return matched;
+  }
+
+  // Intersection (AND): & separates parts
+  if (q.includes('&')) {
+    const parts = q.split('&').map(p => p.trim()).filter(Boolean);
+    let result = null;
+    for (const part of parts) {
+      const s = resolveAtom(part, questions);
+      if (result === null) { result = s; }
+      else { for (const id of [...result]) { if (!s.has(id)) result.delete(id); } }
+    }
+    return result || new Set();
+  }
+
+  return resolveAtom(q, questions);
+}
+
+function CollectionsModal({ questions, collections, onSave, onClose, pinnedIds, favIds, completedIds, wrongIds }) {
+  const [colls, setColls] = useState(() => JSON.parse(JSON.stringify(collections)));
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState('#5b8dee');
+  const [active, setActive] = useState(null);
+  // Per-collection query input state
+  const [queryInputs, setQueryInputs] = useState({}); // {collId: string}
+  const [queryPreviews, setQueryPreviews] = useState({}); // {collId: Set<id>}
+
+  const activeCol = colls.find(c => c.id === active);
+
+  const add = () => {
+    if (!newName.trim()) return;
+    const id = Date.now().toString();
+    setColls(prev => [...prev, { id, name: newName.trim(), color: newColor, qIds: [] }]);
+    setNewName(''); setActive(id);
+  };
+  const del = (id) => { setColls(prev => prev.filter(c => c.id !== id)); if (active === id) setActive(null); };
+  const toggleQ = (collId, qId) => {
+    setColls(prev => prev.map(c => c.id !== collId ? c : {
+      ...c, qIds: c.qIds.includes(qId) ? c.qIds.filter(x => x !== qId) : [...c.qIds, qId]
+    }));
+  };
+
+  // Live query preview
+  const handleQueryInput = (collId, val) => {
+    setQueryInputs(prev => ({ ...prev, [collId]: val }));
+    const matched = resolveQuery(val, questions);
+    setQueryPreviews(prev => ({ ...prev, [collId]: matched }));
+  };
+
+  const applyQuery = (collId) => {
+    const matched = queryPreviews[collId] || resolveQuery(queryInputs[collId] || '', questions);
+    setColls(prev => prev.map(c => c.id !== collId ? c : {
+      ...c, qIds: Array.from(new Set([...c.qIds, ...matched]))
+    }));
+    setQueryInputs(prev => ({ ...prev, [collId]: '' }));
+    setQueryPreviews(prev => ({ ...prev, [collId]: new Set() }));
+  };
+
+  const replaceQuery = (collId) => {
+    const matched = queryPreviews[collId] || resolveQuery(queryInputs[collId] || '', questions);
+    setColls(prev => prev.map(c => c.id !== collId ? c : { ...c, qIds: Array.from(matched) }));
+    setQueryInputs(prev => ({ ...prev, [collId]: '' }));
+    setQueryPreviews(prev => ({ ...prev, [collId]: new Set() }));
+  };
+
+  const PRESETS = [
+    { name: 'Wrong Answers',  color: '#f06058', fn: () => Array.from(wrongIds) },
+    { name: 'Exam Day Review',color: '#f5a623', fn: () => Array.from(favIds) },
+    { name: 'Completed',      color: '#3ecf8e', fn: () => Array.from(completedIds) },
+  ];
+
+  const qInput = (active && queryInputs[active]) || '';
+  const qPreview = (active && queryPreviews[active]) || new Set();
+  const previewCount = qPreview.size;
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 680 }}>
+
+        {/* Header */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+          <div style={{ fontWeight:800, fontSize:17, display:'flex', gap:8, alignItems:'center' }}><I.Folder/> Collections</div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button className="btn primary" onClick={() => onSave(colls)}>Save All</button>
+            <button className="btn ghost" onClick={onClose}><I.X s={15}/></button>
+          </div>
+        </div>
+
+        {/* Presets */}
+        <div style={{ marginBottom:14 }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', marginBottom:7 }}>Quick Presets</div>
+          <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+            {PRESETS.map(p => (
+              <button key={p.name} className="btn" style={{ fontSize:11 }} onClick={() => {
+                const id = Date.now().toString();
+                setColls(prev => [...prev, { id, name:p.name, color:p.color, qIds:p.fn() }]);
+                setActive(id);
+              }}>+ {p.name}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* New collection row */}
+        <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+          <input className="input" placeholder="Collection name…" value={newName}
+            onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==='Enter' && add()} style={{ flex:1 }}/>
+          <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
+            style={{ width:36, height:36, border:'none', borderRadius:6, cursor:'pointer', padding:2 }}/>
+          <button className="btn primary" onClick={add}>Add</button>
+        </div>
+
+        {/* Body: list + editor */}
+        <div style={{ display:'flex', gap:12, minHeight:360 }}>
+
+          {/* Left: collection list */}
+          <div style={{ width:190, borderRight:'1px solid var(--border)', paddingRight:10, flexShrink:0 }}>
+            {colls.length === 0 && (
+              <div style={{ fontSize:12, color:'var(--muted)', textAlign:'center', padding:'30px 0' }}>No collections yet</div>
+            )}
+            {colls.map(c => (
+              <div key={c.id}
+                style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderRadius:8, cursor:'pointer',
+                  background: active===c.id ? 'var(--card2)' : 'transparent', marginBottom:3,
+                  border: active===c.id ? '1px solid var(--border2)' : '1px solid transparent' }}
+                onClick={() => setActive(c.id)}>
+                <div style={{ width:9, height:9, borderRadius:'50%', background:c.color, flexShrink:0 }}/>
+                <span style={{ flex:1, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</span>
+                <span style={{ fontSize:10, color:'var(--muted)', fontFamily:'var(--mono)' }}>{c.qIds.length}</span>
+                <button onClick={e => { e.stopPropagation(); del(c.id); }}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', padding:0, display:'flex' }}><I.X s={11}/></button>
+              </div>
+            ))}
+          </div>
+
+          {/* Right: editor panel */}
+          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:10, overflow:'hidden' }}>
+            {!active && (
+              <div style={{ fontSize:13, color:'var(--muted)', textAlign:'center', paddingTop:60 }}>
+                ← Select or create a collection to edit it
+              </div>
+            )}
+
+            {active && activeCol && (<>
+              {/* ── Smart Query Input ── */}
+              <div style={{ background:'var(--card2)', border:'1px solid var(--border2)', borderRadius:10, padding:12 }}>
+                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', marginBottom:6 }}>
+                  Smart Add by Query
+                </div>
+                <input
+                  className="input"
+                  placeholder='e.g. fever IN 1-50  |  tag:malaria  |  lesson:inf  |  fever & 1-50  |  pneumonia; typhoid'
+                  value={qInput}
+                  onChange={e => handleQueryInput(active, e.target.value)}
+                  onKeyDown={e => e.key==='Enter' && qInput.trim() && applyQuery(active)}
+                  style={{ marginBottom:8 }}
+                />
+                {/* Syntax hints */}
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+                  {[
+                    ['1-50','ID range'],
+                    ['fever IN 1-50','keyword in range'],
+                    ['q:fever','question field'],
+                    ['tag:malaria','tag search'],
+                    ['lesson:inf','lesson search'],
+                    ['ans:B','answer key'],
+                    ['fever & 1-50','AND (intersect)'],
+                    ['pneumonia; typhoid','OR (union)'],
+                  ].map(([ex, tip]) => (
+                    <button key={ex} onClick={() => handleQueryInput(active, ex)}
+                      style={{ padding:'2px 8px', borderRadius:5, fontSize:10, fontFamily:'var(--mono)', fontWeight:600,
+                        background:'var(--card)', border:'1px solid var(--border2)', color:'var(--muted)', cursor:'pointer', whiteSpace:'nowrap' }}
+                      title={tip}>{ex}</button>
+                  ))}
+                </div>
+                {/* Syntax legend */}
+                <div style={{ fontSize:10, color:'var(--muted)', lineHeight:1.7, marginBottom:4, borderTop:'1px solid var(--border)', paddingTop:7 }}>
+                  <span style={{ fontWeight:700, color:'var(--primary)' }}>Query syntax: </span>
+                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>fever IN 1-50</code> → keyword scoped to range &nbsp;·&nbsp; </span>
+                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>A &amp; B</code> → AND (both) &nbsp;·&nbsp; </span>
+                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>A ; B</code> → OR (either) &nbsp;·&nbsp; </span>
+                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>q: ans: tag: exp: lesson:</code> → field search</span>
+                </div>
+
+                {/* Preview */}
+                {qInput.trim() && (
+                  <div style={{ fontSize:12, color: previewCount>0?'var(--green)':'var(--red)', marginBottom:8, fontWeight:600 }}>
+                    {previewCount>0 ? `✓ Matches ${previewCount} question${previewCount!==1?'s':''}` : '✗ No matches'}
+                  </div>
+                )}
+                {/* Preview list */}
+                {previewCount > 0 && (
+                  <div style={{ maxHeight:80, overflowY:'auto', marginBottom:8, display:'flex', flexDirection:'column', gap:3 }}>
+                    {Array.from(qPreview).slice(0,8).map(qid => {
+                      const qq = questions.find(x => x.id === qid);
+                      return qq ? (
+                        <div key={qid} style={{ fontSize:11, color:'var(--muted)', display:'flex', gap:6 }}>
+                          <span style={{ fontFamily:'var(--mono)', color:'var(--primary)', flexShrink:0 }}>#{qid}</span>
+                          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{qq.question.slice(0,70)}{qq.question.length>70?'…':''}</span>
+                        </div>
+                      ) : null;
+                    })}
+                    {previewCount > 8 && <div style={{ fontSize:11, color:'var(--muted)' }}>…and {previewCount-8} more</div>}
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:6 }}>
+                  <button className="btn primary" style={{ fontSize:12, flex:1 }}
+                    onClick={() => applyQuery(active)} disabled={!qInput.trim() || previewCount===0}>
+                    + Add to collection
+                  </button>
+                  <button className="btn" style={{ fontSize:12, flex:1 }}
+                    onClick={() => replaceQuery(active)} disabled={!qInput.trim() || previewCount===0}
+                    title="Replace current selection with these results">
+                    ↺ Replace selection
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Manual checkbox list ── */}
+              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)' }}>
+                Or pick manually ({activeCol.qIds.length} selected)
+                {activeCol.qIds.length > 0 && (
+                  <button onClick={() => setColls(prev => prev.map(c => c.id!==active?c:{...c,qIds:[]}))}
+                    style={{ marginLeft:10, fontSize:10, color:'var(--red)', background:'none', border:'none', cursor:'pointer', fontWeight:700 }}>
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div style={{ flex:1, overflowY:'auto', maxHeight:200 }}>
+                {questions.map(q => {
+                  const checked = activeCol.qIds.includes(q.id);
+                  const isPreview = qPreview.has(q.id);
+                  return (
+                    <label key={q.id}
+                      style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'5px 8px', cursor:'pointer',
+                        borderRadius:6, transition:'background .1s',
+                        background: isPreview ? `${activeCol.color}18` : 'transparent',
+                        border: isPreview ? `1px solid ${activeCol.color}44` : '1px solid transparent' }}
+                      className="dd-item">
+                      <input type="checkbox" checked={checked} onChange={() => toggleQ(active, q.id)}
+                        style={{ marginTop:2, accentColor:activeCol.color }}/>
+                      <span style={{ fontSize:12, lineHeight:1.5, flex:1 }}>
+                        <span style={{ fontFamily:'var(--mono)', color:'var(--muted)', fontSize:10 }}>#{q.id}</span>
+                        {' '}{q.question.slice(0,75)}{q.question.length>75?'…':''}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════ PRACTICE / EXAM MODE ═══════════════════════════════
+function PracticeMode({ questions, mode, onClose, onRateSR, weakIds, onAddWrong, onMarkDone, onMarkWeak }) {
+  const isExam = mode === 'exam';
+  const isWrongReview = mode === 'wrong';
+  const [deck] = useState(() => [...questions].sort(() => Math.random()-0.5));
+  const [idx, setIdx] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [score, setScore] = useState({ correct:0, wrong:0, skipped:0 });
+  const [done, setDone] = useState(false);
+  const [examAnswers, setExamAnswers] = useState({}); // for exam: {qId: selected}
+  const [examDone, setExamDone] = useState(false);
+  // Timer
+  const [timeLeft, setTimeLeft] = useState(isExam ? deck.length * 90 : 90); // exam: 90s/q total; practice: 90s/q
+  const [timerActive, setTimerActive] = useState(true);
+  const [sessionTime, setSessionTime] = useState(0);
+  const timerRef = useRef(null);
+  const sessionRef = useRef(null);
+
+  useEffect(() => {
+    sessionRef.current = setInterval(() => setSessionTime(t => t+1), 1000);
+    return () => clearInterval(sessionRef.current);
+  }, []);
+
+  const [timerExpired, setTimerExpired] = useState(false);
+
+  useEffect(() => {
+    if (!timerActive || done || examDone) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          setTimerExpired(true);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [timerActive, idx, done, examDone]);
+
+  // Handle timer expiry outside the setTimeLeft updater to avoid stale closures
+  useEffect(() => {
+    if (!timerExpired) return;
+    setTimerExpired(false);
+    if (isExam) setExamDone(true);
+    else skip();
+  }, [timerExpired]);
+
+  const q = deck[idx];
+
+  const answer = (char) => {
+    if (isExam) {
+      setExamAnswers(prev => ({...prev, [q.id]: char}));
+      return;
+    }
+    if (selected) return;
+    setSelected(char); setShown(true);
+    const correct = char === q.answerKey?.toUpperCase();
+    setScore(s => ({...s, correct:s.correct+(correct?1:0), wrong:s.wrong+(correct?0:1)}));
+    if (correct) { onMarkDone(q.id); }
+    else { onAddWrong(q.id); onMarkWeak(q.id); }
+    clearInterval(timerRef.current);
+  };
+
+  const revealAnswer = () => {
+    setShown(true);
+    clearInterval(timerRef.current);
+  };
+
+  const rate = (quality) => {
+    onRateSR(q.id, quality);
+    next();
+  };
+
+  const next = () => {
+    if (idx+1 >= deck.length) { setDone(true); return; }
+    setIdx(i=>i+1); setSelected(null); setShown(false);
+    setTimeLeft(isExam ? timeLeft : 90);
+    setTimerActive(true);
+  };
+  const skip = () => { setScore(s=>({...s,skipped:s.skipped+1})); next(); };
+
+  const submitExam = () => { setExamDone(true); clearInterval(timerRef.current); };
+
+  // Exam results — apply done/weak on first render
+  const examApplied = useRef(false);
+  if (examDone && !examApplied.current) {
+    examApplied.current = true;
+    deck.forEach(q => {
+      const isCorrect = examAnswers[q.id]?.toUpperCase() === q.answerKey?.toUpperCase();
+      if (isCorrect) onMarkDone(q.id);
+      else if (examAnswers[q.id]) { onAddWrong(q.id); onMarkWeak(q.id); }
+    });
+  }
+
+  if (examDone) {
+    let correct=0;
+    deck.forEach(q => { if(examAnswers[q.id]?.toUpperCase()===q.answerKey?.toUpperCase()) correct++; });
+    const pct = Math.round((correct/deck.length)*100);
+    return (
+      <div className="modal-bg">
+        <div className="modal" style={{textAlign:'center',maxWidth:520}}>
+          <div style={{fontSize:40,marginBottom:8}}>{pct>=80?'🎉':pct>=60?'👍':'💪'}</div>
+          <div style={{fontSize:22,fontWeight:800,marginBottom:4}}>Exam Complete</div>
+          <div style={{color:'var(--muted)',marginBottom:20}}>{deck.length} questions · {Math.floor(sessionTime/60)}:{String(sessionTime%60).padStart(2,'0')} elapsed</div>
+          <div style={{fontSize:40,fontWeight:800,color:pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)',marginBottom:20}}>{pct}%</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:20}}>
+            <div className="stat-card" style={{alignItems:'center'}}><div className="stat-num" style={{color:'var(--green)'}}>{correct}</div><div className="stat-label">Correct ✓ Done</div></div>
+            <div className="stat-card" style={{alignItems:'center'}}><div className="stat-num" style={{color:'var(--red)'}}>{deck.length-correct}</div><div className="stat-label">Wrong ⚡ Weak</div></div>
+            <div className="stat-card" style={{alignItems:'center'}}><div className="stat-num">{Object.keys(examAnswers).length}</div><div className="stat-label">Answered</div></div>
+          </div>
+          {/* Detailed results */}
+          <div style={{maxHeight:220,overflowY:'auto',textAlign:'left',marginBottom:16}}>
+            {deck.map((q,i) => {
+              const sel = examAnswers[q.id]; const correct2 = sel?.toUpperCase()===q.answerKey?.toUpperCase();
+              return (
+                <div key={q.id} style={{padding:'6px 10px',borderRadius:6,marginBottom:4,background:correct2?'var(--gg)':'var(--rg)',border:`1px solid ${correct2?'var(--green)':'var(--red)'}`,fontSize:12,display:'flex',gap:8,alignItems:'flex-start'}}>
+                  <span style={{fontFamily:'var(--mono)',flexShrink:0,fontWeight:700,color:correct2?'var(--green)':'var(--red)'}}>{correct2?'✓':'✗'}</span>
+                  <span style={{flex:1,lineHeight:1.4}}>{q.question.slice(0,60)}{q.question.length>60?'…':''}</span>
+                  <span style={{fontFamily:'var(--mono)',fontSize:11,flexShrink:0,color:correct2?'var(--green)':'var(--red)'}}>{sel||'—'} / {q.answerKey}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',marginBottom:12}}>✓ Correct → marked <b>Done</b> &nbsp;·&nbsp; ✗ Wrong → marked <b>Weak</b></div>
+          <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+            <button className="btn" onClick={onClose}>Exit</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Practice done screen
+  if (done) {
+    const total = score.correct+score.wrong+score.skipped;
+    const pct = Math.round((score.correct/Math.max(1,total))*100);
+    return (
+      <div className="modal-bg">
+        <div className="modal" style={{textAlign:'center',maxWidth:480}}>
+          <div style={{fontSize:40,marginBottom:8}}>{pct>=80?'🎉':pct>=50?'👍':'💪'}</div>
+          <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Session Complete!</div>
+          <div style={{color:'var(--muted)',marginBottom:20}}>{Math.floor(sessionTime/60)}m {sessionTime%60}s studied</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:16}}>
+            <div className="stat-card" style={{alignItems:'center'}}><div className="stat-num" style={{color:'var(--green)'}}>{score.correct}</div><div className="stat-label">Correct</div></div>
+            <div className="stat-card" style={{alignItems:'center'}}><div className="stat-num" style={{color:'var(--red)'}}>{score.wrong}</div><div className="stat-label">Wrong</div></div>
+            <div className="stat-card" style={{alignItems:'center'}}><div className="stat-num" style={{color:'var(--muted)'}}>{score.skipped}</div><div className="stat-label">Skipped</div></div>
+          </div>
+          <div style={{fontSize:36,fontWeight:800,color:pct>=80?'var(--green)':pct>=50?'var(--yellow)':'var(--red)',marginBottom:16}}>{pct}%</div>
+          <div style={{fontSize:11,color:'var(--muted)',marginBottom:16}}>✓ Correct answers → marked <b style={{color:'var(--green)'}}>Done</b> &nbsp;·&nbsp; ✗ Wrong answers → marked <b style={{color:'var(--red)'}}>Weak</b></div>
+          <button className="btn" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Exam in progress
+  if (isExam) {
+    const answered = Object.keys(examAnswers).length;
+    return (
+      <div className="modal-bg">
+        <div className="modal" style={{maxWidth:640}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:14}}>📝 Exam — Q{idx+1}/{deck.length}</div>
+            <div style={{display:'flex',gap:12,alignItems:'center'}}>
+              <span style={{fontFamily:'var(--mono)',fontSize:13,color:timeLeft<60?'var(--red)':'var(--muted)'}}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span>
+              <span style={{fontSize:12,color:'var(--muted)'}}>{answered}/{deck.length} answered</span>
+              <button className="btn primary" onClick={submitExam}>Submit</button>
+              <button className="btn ghost" onClick={onClose}><I.X s={15}/></button>
+            </div>
+          </div>
+          <div className="pb" style={{marginBottom:16}}><div className="pb-fill" style={{width:`${((idx)/deck.length)*100}%`,background:'var(--primary)'}}/></div>
+          <div style={{fontSize:15,fontWeight:500,lineHeight:1.6,marginBottom:16}}>{q.question}</div>
+          {q.options && q.options.length>0 && (
+            <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
+              {q.options.map((opt,i) => {
+                const char=String.fromCharCode(65+i);
+                const sel=examAnswers[q.id]===char;
+                return (
+                  <button key={i} className="quiz-btn" onClick={()=>answer(char)} style={{borderColor:sel?'var(--primary)':'var(--border2)',background:sel?'var(--pg)':'var(--card2)',color:sel?'var(--primary)':'var(--text)'}}>
+                    <span style={{fontFamily:'var(--mono)',fontWeight:700,marginRight:8}}>{char}.</span>{opt}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div style={{display:'flex',justifyContent:'space-between'}}>
+            <button className="btn" onClick={()=>{setIdx(i=>Math.max(0,i-1));setSelected(null);setShown(false);}}>← Back</button>
+            <button className="btn primary" onClick={()=>{ if(idx+1>=deck.length)submitExam(); else {setIdx(i=>i+1);setSelected(null);setShown(false);} }}>{idx+1>=deck.length?'Submit':'Next →'}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Practice in progress
+  const timerPct = (timeLeft/90)*100;
+  const circumference = 2*Math.PI*20;
+  const dashOffset = circumference*(1-timerPct/100);
+
+  return (
+    <div className="modal-bg">
+      <div className="modal" style={{maxWidth:600}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <div style={{fontWeight:700,fontSize:14}}>
+            {isWrongReview?'❌ Wrong Review':'🧠 Practice'} — {idx+1}/{deck.length}
+            {weakIds.has(q.id) && <span style={{marginLeft:8}} className="tag-chip weak">Weak Spot</span>}
+          </div>
+          <div style={{display:'flex',gap:10,alignItems:'center'}}>
+            <span style={{fontSize:12,color:'var(--green)',fontWeight:600}}>✓ {score.correct}</span>
+            <span style={{fontSize:12,color:'var(--red)',fontWeight:600}}>✗ {score.wrong}</span>
+            {/* Circular timer */}
+            <svg width="44" height="44" style={{flexShrink:0}}>
+              <circle cx="22" cy="22" r="20" fill="none" stroke="var(--border2)" strokeWidth="3"/>
+              <circle cx="22" cy="22" r="20" fill="none" stroke={timeLeft<20?'var(--red)':timeLeft<45?'var(--yellow)':'var(--primary)'}
+                strokeWidth="3" strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                strokeLinecap="round" style={{transform:'rotate(-90deg)',transformOrigin:'22px 22px',transition:'stroke-dashoffset .5s'}}/>
+              <text x="22" y="27" textAnchor="middle" fontSize="12" fontFamily="var(--mono)" fill="var(--text)">{timeLeft}</text>
+            </svg>
+            <button className="btn ghost" onClick={onClose} style={{padding:'4px 8px'}}><I.X s={15}/></button>
+          </div>
+        </div>
+
+        <div className="pb" style={{marginBottom:16}}><div className="pb-fill" style={{width:`${(idx/deck.length)*100}%`,background:'var(--primary)'}}/></div>
+        <div style={{fontSize:15,fontWeight:500,lineHeight:1.6,marginBottom:16}}>{q.question}</div>
+
+        {q.options && q.options.length>0 ? (
+          <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
+            {q.options.map((opt,i) => {
+              const char=String.fromCharCode(65+i);
+              const isCorrect=q.answerKey&&char===q.answerKey;
+              const isSel=isExam?(examAnswers[q.id]===char):(selected===char);
+              let cls='';
+              if(!isExam&&shown&&isCorrect) cls='correct';
+              else if(!isExam&&shown&&isSel&&!isCorrect) cls='wrong';
+              else if(isExam&&isSel) cls=''; // highlight exam selection without revealing answer
+              const isDisabled=!isExam&&!!selected;
+              return <button key={i} className={`quiz-btn ${cls}`}
+                style={isExam&&isSel?{borderColor:'var(--primary)',background:'var(--pg)',color:'var(--primary)'}:{}}
+                onClick={()=>answer(char)} disabled={isDisabled}>
+                <span style={{fontFamily:'var(--mono)',fontWeight:700,marginRight:8}}>{char}.</span>{opt}
+              </button>;
+            })}
+          </div>
+        ) : (
+          !shown && <button className="btn primary" style={{marginBottom:16}} onClick={revealAnswer}>Reveal Answer</button>
+        )}
+
+        {shown && (
+          <>
+            {(!q.options||q.options.length===0) && (
+              <div style={{padding:'10px 14px',background:'var(--gg)',border:'1px solid var(--green)',borderRadius:8,color:'var(--green)',marginBottom:12,fontSize:13}}>
+                <b>Answer:</b> {q.answerKey?q.answerKey+' — ':''}{q.answerText}
+              </div>
+            )}
+            {q.explanation && (
+              <div style={{borderLeft:'3px solid var(--primary)',paddingLeft:12,fontSize:12,color:'var(--muted)',marginBottom:14,lineHeight:1.6}}>
+                <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:'var(--primary)',marginBottom:2}}>Explanation</div>
+                {q.explanation}
+              </div>
+            )}
+            {/* Confidence / SR rating */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',color:'var(--muted)',marginBottom:6,letterSpacing:'.08em'}}>How well did you know this?</div>
+              <div style={{display:'flex',gap:6}}>
+                <button className="conf-btn again" onClick={()=>rate(0)} title="Shortcut: 1">Again<br/><span style={{fontSize:10,opacity:.7}}>(&lt;1d)</span></button>
+                <button className="conf-btn hard" onClick={()=>rate(1)} title="Shortcut: 2">Hard<br/><span style={{fontSize:10,opacity:.7}}>(~1d)</span></button>
+                <button className="conf-btn good" onClick={()=>rate(2)} title="Shortcut: 3">Good<br/><span style={{fontSize:10,opacity:.7}}>(6d)</span></button>
+                <button className="conf-btn easy" onClick={()=>rate(3)} title="Shortcut: 4">Easy<br/><span style={{fontSize:10,opacity:.7}}>({q.id&&'+'}long)</span></button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {!shown && q.options && q.options.length>0 && (
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
+            <button className="btn" onClick={skip}>Skip</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════ REPORT ═══════════════════════════════
+function ReportModal({ questions, favIds, completedIds, notes, srData, weakIds, sessions, streak, onClose }) {
+  const total = questions.length, done = completedIds.size;
+  const pct = total>0?Math.round((done/total)*100):0;
+  const due = questions.filter(q=>isDue(srData[q.id])).length;
+  const weak = weakIds.size;
+  const noted = Object.values(notes).filter(n=>n&&n.trim()).length;
+
+  const lessonMap = {};
+  questions.forEach(q=>{
+    if(!lessonMap[q.lesson]) lessonMap[q.lesson]={total:0,done:0};
+    lessonMap[q.lesson].total++;
+    if(completedIds.has(q.id)) lessonMap[q.lesson].done++;
+  });
+  const lessons = Object.entries(lessonMap).sort((a,b)=>b[1].total-a[1].total);
+
+  const tagMap = {};
+  questions.forEach(q=>{ if(q.tag){if(!tagMap[q.tag])tagMap[q.tag]=0; tagMap[q.tag]++;} });
+  const tags = Object.entries(tagMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+
+  const totalSessionSec = sessions.reduce((a,s)=>a+(s.duration||0),0);
+  const avgSession = sessions.length>0?Math.round(totalSessionSec/sessions.length):0;
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:700}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <div style={{fontWeight:800,fontSize:17}}>📊 Study Report</div>
+          <button className="btn ghost" onClick={onClose}><I.X s={15}/></button>
+        </div>
+
+        {/* Stats grid */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(100px,1fr))',gap:8,marginBottom:20}}>
+          {[
+            [total,'Total','var(--text)'],[done,'Done','var(--green)'],[total-done,'Unsolved','var(--yellow)'],
+            [due,'SR Due','var(--purple)'],[weak,'Weak','var(--red)'],[favIds.size,'Favorites','var(--yellow)'],
+            [noted,'Notes','var(--primary)'],[streak,'Day Streak','var(--yellow)'],[sessions.length,'Sessions','var(--muted)']
+          ].map(([n,l,c])=>(
+            <div key={l} className="stat-card" style={{alignItems:'center'}}>
+              <div className="stat-num" style={{color:c}}>{n}</div>
+              <div className="stat-label">{l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{marginBottom:8,display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--muted)'}}>
+          <span>Overall Progress</span><span style={{fontFamily:'var(--mono)'}}>{pct}%</span>
+        </div>
+        <div className="pb" style={{marginBottom:20}}>
+          <div className="pb-fill" style={{width:`${pct}%`,background:pct>=80?'var(--green)':pct>=50?'var(--yellow)':'var(--primary)'}}/>
+        </div>
+
+        {/* Session time */}
+        {sessions.length>0 && (
+          <div style={{marginBottom:20,display:'flex',gap:12,flexWrap:'wrap'}}>
+            <span style={{fontSize:13,color:'var(--muted)'}}><I.Clock/> Total study time: <b style={{color:'var(--text)'}}>{Math.floor(totalSessionSec/3600)}h {Math.floor((totalSessionSec%3600)/60)}m</b></span>
+            <span style={{fontSize:13,color:'var(--muted)'}}>Avg session: <b style={{color:'var(--text)'}}>{Math.floor(avgSession/60)}m {avgSession%60}s</b></span>
+          </div>
+        )}
+
+        {/* Lesson breakdown */}
+        {lessons.length>0 && (
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',marginBottom:8}}>Lesson Breakdown</div>
+            <div style={{maxHeight:200,overflowY:'auto'}}>
+              <table className="rt">
+                <thead><tr><th>Lesson</th><th>Total</th><th>Done</th><th style={{width:120}}>Progress</th></tr></thead>
+                <tbody>{lessons.map(([l,d])=>{
+                  const p=Math.round((d.done/d.total)*100);
+                  return (
+                    <tr key={l}>
+                      <td style={{fontSize:12,maxWidth:200}}><div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={l}>{l.length>40?l.slice(0,40)+'…':l}</div></td>
+                      <td style={{fontFamily:'var(--mono)',fontSize:12,textAlign:'center'}}>{d.total}</td>
+                      <td style={{fontFamily:'var(--mono)',fontSize:12,textAlign:'center',color:'var(--green)'}}>{d.done}</td>
+                      <td><div style={{display:'flex',alignItems:'center',gap:6}}><div className="pb" style={{flex:1}}><div className="pb-fill" style={{width:`${p}%`,background:p===100?'var(--green)':'var(--primary)'}}/></div><span style={{fontSize:10,fontFamily:'var(--mono)',color:'var(--muted)',minWidth:28}}>{p}%</span></div></td>
+                    </tr>
+                  );
+                })}</tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tags */}
+        {tags.length>0 && (
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',marginBottom:8}}>Top Tags</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {tags.map(([tag,count])=>(
+                <span key={tag} className="tag-chip"><I.Tag/>{tag} <span style={{fontFamily:'var(--mono)',color:'var(--primary)'}}>×{count}</span></span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button className="btn" onClick={()=>{
+          let t=`QnA Hub Report\n${'='.repeat(40)}\n\nTotal: ${total}\nDone: ${done} (${pct}%)\nSR Due: ${due}\nWeak: ${weak}\nStreak: ${streak} days\n\nLessons:\n`;
+          lessons.forEach(([l,d])=>t+=`  ${l}: ${d.done}/${d.total}\n`);
+          navigator.clipboard?.writeText(t).then(()=>alert('Copied!'));
+        }}><I.Copy/> Copy Report</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════ NOTE MODAL ═══════════════════════════════
+function NoteModal({ qId, question, noteText, onSave, onClose }) {
+  const [text, setText] = useState(noteText||'');
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:500}}>
+        <div style={{fontWeight:700,marginBottom:6,fontSize:14}}>📝 Note — Q{qId}</div>
+        <div style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.5}}>{question}</div>
+        <textarea className="note-area" value={text} onChange={e=>setText(e.target.value)} placeholder="Add notes, mnemonics, reminders..." rows={6} autoFocus/>
+        <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
+          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn primary" onClick={()=>{onSave(qId,text);onClose();}}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════ TAG EDITOR MODAL ═══════════════════════════════
+function TagEditModal({ qId, question, currentTag, onSave, onClose }) {
+  const [tag, setTag] = useState(currentTag||'');
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:420}}>
+        <div style={{fontWeight:700,marginBottom:8,fontSize:14}}>🏷 Edit Tag — Q{qId}</div>
+        <div style={{color:'var(--muted)',fontSize:12,marginBottom:12}}>{question.slice(0,80)}{question.length>80?'…':''}</div>
+        <input className="input" value={tag} onChange={e=>setTag(e.target.value)} placeholder="Tag name..." autoFocus onKeyDown={e=>e.key==='Enter'&&(onSave(qId,tag),onClose())}/>
+        <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
+          <button className="btn" onClick={()=>{onSave(qId,'');onClose();}}>Clear</button>
+          <button className="btn primary" onClick={()=>{onSave(qId,tag);onClose();}}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════ STREAK HEATMAP ═══════════════════════════════
+function StreakHeatmap({ sessions }) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for (let i=89; i>=0; i--) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    days.push(d.toDateString());
+  }
+  const sessionDays = new Set(sessions.map(s=>new Date(s.date).toDateString()));
+  const weeks = [];
+  for (let i=0; i<days.length; i+=7) weeks.push(days.slice(i,i+7));
+
+  return (
+    <div style={{display:'flex',gap:3}}>
+      {weeks.map((week,wi)=>(
+        <div key={wi} style={{display:'flex',flexDirection:'column',gap:3}}>
+          {week.map(day=>{
+            const active=sessionDays.has(day);
+            const isToday=day===today.toDateString();
+            return (
+              <div key={day} title={day} className="heat-cell" style={{
+                background:active?'var(--green)':'var(--card2)',
+                border:isToday?'1px solid var(--primary)':'1px solid transparent',
+                opacity:active?1:0.5
+              }}/>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════ QUESTION CARD ═══════════════════════════════
+const QuestionCard = memo(function QuestionCard({
+  q, isCollapsed, isFav, isDone, isPinned, isWeak, srCard, isDue: due,
+  displaySettings, searchQ, onToggleCollapse, onToggleFav, onToggleDone,
+  onOpenNote, noteText, onOpenTag, customTag, compact, onTogglePin, collections,
+  focused, onFocusClick, localAnsOverride, onToggleLocalAns,
+  localOptOverride, onToggleLocalOpt, localExpOverride, onToggleLocalExp,
+}) {
+  const showAns  = localAnsOverride !== undefined ? localAnsOverride : displaySettings.showAnswer;
+  const showOpts = localOptOverride  !== undefined ? localOptOverride : displaySettings.showOptions;
+  const showExp  = localExpOverride  !== undefined ? localExpOverride : displaySettings.showExplanation;
+
+  const [copied, setCopied] = useState(false);
+
+  const copyCard = () => {
+    let t = `Q${q.id}: ${q.question}\n`;
+    if (showOpts && q.options && q.options.length>0)
+      q.options.forEach((o,i) => { t += `  ${String.fromCharCode(65+i)}) ${o}\n`; });
+    if (showAns) t += `  ✓ ${q.answerKey?q.answerKey+' — ':''}${q.answerText}\n`;
+    if (showExp && q.explanation) t += `  📖 ${q.explanation}\n`;
+    navigator.clipboard?.writeText(t.trim()).then(()=>{
+      setCopied(true);
+      setTimeout(()=>setCopied(false), 1400);
+    });
+  };
 
   return (
     <div
-      className={`q-card animate-fade-in ${isCompleted ? 'completed' : ''} ${isUnsolved && !isCompleted ? 'unsolved' : ''}`}
-      style={{ marginBottom: compact ? 8 : 14 }}
+      id={`q-${q.id}`}
+      className={`q-card afu ${isDone?'done':''} ${isPinned&&!isDone?'pinned':''} ${isWeak&&!isDone&&!isPinned?'weak-card':''}`}
+      style={{marginBottom:compact?6:12,outline:focused?'2px solid var(--primary)':'none',outlineOffset:2}}
+      onClick={onFocusClick}
     >
-      {/* Card Header */}
-      <div
-        style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-          gap: 12, padding: compact ? '12px 14px' : '16px 18px',
-          cursor: 'pointer',
-        }}
-        onClick={() => onToggleCollapse(q.id)}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1 }}>
-          {/* Complete toggle */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleCompleted(q.id); }}
-            style={{ marginTop: 2, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 0 }}
-            title={isCompleted ? "Mark unread" : "Mark done"}
-          >
-            {isCompleted ? <I.CheckCircle size={18}/> : <I.Circle size={18}/>}
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,padding:compact?'10px 13px':'14px 16px',cursor:'pointer'}} onClick={()=>onToggleCollapse(q.id)}>
+        <div style={{display:'flex',alignItems:'flex-start',gap:8,flex:1}}>
+          <button onClick={e=>{e.stopPropagation();onToggleDone(q.id);}} style={{marginTop:2,flexShrink:0,background:'none',border:'none',cursor:'pointer',padding:0}} title="Mark done (D)">
+            {isDone?<I.CheckCircle size={17}/>:<I.Circle size={17}/>}
           </button>
-
-          <div style={{ flex: 1 }}>
-            {/* Lesson badge */}
-            {q.lesson && q.lesson !== "General" && (
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--muted)', marginBottom: 4 }}>
-                {q.lesson.length > 50 ? q.lesson.slice(0, 50) + '…' : q.lesson}
-              </div>
-            )}
-            <div
-              style={{
-                fontSize: compact ? 13 : 14, fontWeight: 500, lineHeight: 1.55,
-                textDecoration: isCompleted ? 'line-through' : 'none',
-                opacity: isCompleted ? 0.7 : 1,
-              }}
-            >
-              {hl(q.question)}
+          <div style={{flex:1}}>
+            {q.lesson&&q.lesson!=='General'&&<div style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--muted)',marginBottom:3}}>{q.lesson.length>55?q.lesson.slice(0,55)+'…':q.lesson}</div>}
+            <div style={{fontSize:compact?13:14,fontWeight:500,lineHeight:1.55,textDecoration:isDone?'line-through':'none',opacity:isDone?.7:1}}>
+              {hl(q.question, searchQ)}
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {/* Individual answer toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setLocalAnswer(prev => {
-                // Cycle: null(global) → show → hide → null(global)
-                if (prev === null) return true;
-                if (prev === true) return false;
-                return null;
-              });
-            }}
-            title={localAnswer === null ? `Answer: following global (${displaySettings.showAnswer ? 'visible' : 'hidden'}) — click to override` : localAnswer ? 'Answer: shown — click to hide' : 'Answer: hidden — click to reset'}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
-              transition: 'all 0.15s',
-              background: localAnswer === true
-                ? 'var(--green-glow)'
-                : localAnswer === false
-                  ? 'rgba(240,96,88,0.12)'
-                  : 'var(--card2)',
-              color: localAnswer === true
-                ? 'var(--green)'
-                : localAnswer === false
-                  ? 'var(--red)'
-                  : 'var(--muted)',
-              border: localAnswer === true
-                ? '1px solid var(--green)'
-                : localAnswer === false
-                  ? '1px solid var(--red)'
-                  : '1px solid var(--border2)',
-            }}
-          >
-            {localAnswer === true ? <I.Eye/> : localAnswer === false ? <I.EyeOff/> : <I.Eye/>}
-            <span style={{ display: compact ? 'none' : undefined }}>
-              {localAnswer === true ? 'Ans' : localAnswer === false ? 'Ans' : 'Ans'}
-            </span>
+        {/* Actions */}
+        <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+          {/* SR indicator */}
+          {due && <span className="tag-chip due" title="Due for review"><I.Zap/>Due</span>}
+          {isWeak && <span className="tag-chip weak" title="Weak spot — answered wrong ≥3x">⚡</span>}
+          {/* Options per-card toggle */}
+          {q.options&&q.options.length>0&&(
+            <button onClick={()=>onToggleLocalOpt(q.id)}
+              title={`Options: ${localOptOverride===undefined?'global':localOptOverride?'shown':'hidden'}`}
+              style={{padding:'3px 7px',borderRadius:6,border:`1px solid ${localOptOverride===true?'var(--primary)':localOptOverride===false?'var(--red)':'var(--border2)'}`,background:localOptOverride===true?'var(--pg)':localOptOverride===false?'var(--rg)':'var(--card2)',color:localOptOverride===true?'var(--primary)':localOptOverride===false?'var(--red)':'var(--muted)',cursor:'pointer',fontSize:10,fontFamily:'var(--mono)',fontWeight:700}}>
+              {localOptOverride===false?<I.EyeOff/>:<I.Eye/>}{!compact&&<span style={{marginLeft:3}}>Opts</span>}
+            </button>
+          )}
+          {/* Explanation per-card toggle */}
+          {q.explanation&&(
+            <button onClick={()=>onToggleLocalExp(q.id)}
+              title={`Explanation: ${localExpOverride===undefined?'global':localExpOverride?'shown':'hidden'}`}
+              style={{padding:'3px 7px',borderRadius:6,border:`1px solid ${localExpOverride===true?'var(--purple)':localExpOverride===false?'var(--red)':'var(--border2)'}`,background:localExpOverride===true?'var(--pug)':localExpOverride===false?'var(--rg)':'var(--card2)',color:localExpOverride===true?'var(--purple)':localExpOverride===false?'var(--red)':'var(--muted)',cursor:'pointer',fontSize:10,fontFamily:'var(--mono)',fontWeight:700}}>
+              {localExpOverride===false?<I.EyeOff/>:<I.Eye/>}{!compact&&<span style={{marginLeft:3}}>Exp</span>}
+            </button>
+          )}
+          {/* Answer per-card toggle */}
+          <button onClick={()=>onToggleLocalAns(q.id)}
+            title={`Answer: ${localAnsOverride===undefined?'global':localAnsOverride?'shown':'hidden'} (A)`}
+            style={{padding:'3px 7px',borderRadius:6,border:`1px solid ${localAnsOverride===true?'var(--green)':localAnsOverride===false?'var(--red)':'var(--border2)'}`,background:localAnsOverride===true?'var(--gg)':localAnsOverride===false?'var(--rg)':'var(--card2)',color:localAnsOverride===true?'var(--green)':localAnsOverride===false?'var(--red)':'var(--muted)',cursor:'pointer',fontSize:10,fontFamily:'var(--mono)',fontWeight:700}}>
+            {localAnsOverride===false?<I.EyeOff/>:<I.Eye/>}{!compact&&<span style={{marginLeft:3}}>{localAnsOverride===true?'✓':localAnsOverride===false?'✗':'Ans'}</span>}
           </button>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); onOpenNote(q.id); }}
-            style={{ background: noteText ? 'var(--primary-glow)' : 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, color: noteText ? 'var(--primary)' : 'var(--muted)' }}
-            title="Notes"
-          >
-            <I.Note/>
+          {/* Copy card */}
+          <button onClick={copyCard} title="Copy question to clipboard"
+            style={{padding:'3px 6px',borderRadius:6,border:`1px solid ${copied?'var(--green)':'var(--border2)'}`,background:copied?'var(--gg)':'var(--card2)',color:copied?'var(--green)':'var(--muted)',cursor:'pointer',display:'flex',alignItems:'center',gap:3,lineHeight:1,transition:'background .2s,border-color .2s,color .2s',animation:copied?'copyPop .35s ease-out':'none',position:'relative',minWidth:28,justifyContent:'center'}}>
+            {copied ? <span style={{fontSize:11,fontWeight:800,animation:'fadeCheck 1.4s ease-out forwards'}}>✓</span> : <I.Copy/>}
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleFavorite(q.id); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6 }}
-            title="Favorite"
-          >
-            <I.Star filled={isFavorite}/>
-          </button>
+          <button onClick={()=>onOpenNote(q.id)} title="Note (N)" style={{background:noteText?'var(--pg)':'none',border:'none',cursor:'pointer',padding:'4px 6px',borderRadius:6,color:noteText?'var(--primary)':'var(--muted)'}}><I.Note/></button>
+          <button onClick={()=>onToggleFav(q.id)} title="Favorite (F)" style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px',borderRadius:6}}><I.Star f={isFav}/></button>
+          <button onClick={()=>onTogglePin(q.id)} title="Pin (P)" style={{background:isPinned?'var(--yg)':'none',border:isPinned?'1px solid var(--yellow)':'1px solid transparent',cursor:'pointer',padding:'3px 6px',borderRadius:6,color:isPinned?'var(--yellow)':'var(--muted)'}}><I.Pin/></button>
           <span className="id-badge">{q.id}</span>
-          <div style={{ color: 'var(--muted)', padding: '2px 4px' }}>
-            {isCollapsed ? <I.ChevronDown/> : <I.ChevronUp/>}
-          </div>
+          <div style={{color:'var(--muted)',padding:'2px 4px'}}>{isCollapsed?<I.Cd/>:<I.Cu/>}</div>
         </div>
       </div>
 
-      {/* Expanded Body */}
+      {/* Body */}
       {!isCollapsed && (
-        <div style={{ borderTop: '1px solid var(--border)', padding: compact ? '10px 14px 14px' : '14px 18px 18px' }} className="animate-fade-in">
+        <div style={{borderTop:'1px solid var(--border)',padding:compact?'8px 13px 12px':'12px 16px 16px'}} className="afi">
           {/* Options */}
-          {displaySettings.showOptions && q.options && q.options.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-              {q.options.map((opt, i) => {
-                const char = String.fromCharCode(65 + i);
-                const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
+          {showOpts&&q.options&&q.options.length>0&&(
+            <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:8}}>
+              {q.options.map((opt,i)=>{
+                const char=String.fromCharCode(65+i);
+                const isCorrect=q.answerKey&&char===q.answerKey;
                 return (
-                  <div key={i} className={`opt-row ${showAnswerEffective && isCorrect ? 'correct' : ''}`}
-                    style={{ fontSize: compact ? 12 : 14 }}>
-                    <span style={{ fontWeight: 700, minWidth: 18, fontFamily: 'var(--mono)', fontSize: 12 }}>{char}.</span>
-                    <span style={{ flex: 1, lineHeight: 1.5 }}>{hl(opt)}</span>
-                    {showAnswerEffective && isCorrect && <I.Check/>}
+                  <div key={i} className={`opt-row ${showAns&&isCorrect?'correct':''}`} style={{fontSize:compact?12:13}}>
+                    <span style={{fontWeight:700,minWidth:18,fontFamily:'var(--mono)',fontSize:11}}>{char}.</span>
+                    <span style={{flex:1,lineHeight:1.5}}>{hl(opt,searchQ)}</span>
+                    {showAns&&isCorrect&&<I.Check/>}
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* Answer text (when no options) */}
-          {showAnswerEffective && q.answerText && (!displaySettings.showOptions || q.options.length === 0) && (
-            <div style={{
-              background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 8,
-              color: 'var(--green)', padding: '8px 12px', fontSize: compact ? 12 : 13,
-              display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10
-            }}>
-              <I.Check/> <span><b>Answer:</b> {q.answerKey ? q.answerKey + ' — ' : ''}{hl(q.answerText)}</span>
+          {/* Answer text */}
+          {showAns&&q.answerText&&(!showOpts||!q.options||q.options.length===0)&&(
+            <div style={{background:'var(--gg)',border:'1px solid var(--green)',borderRadius:8,color:'var(--green)',padding:'7px 12px',fontSize:compact?12:13,display:'flex',gap:8,alignItems:'flex-start',marginBottom:8}}>
+              <I.Check/><span><b>Answer:</b> {q.answerKey?q.answerKey+' — ':''}{hl(q.answerText,searchQ)}</span>
             </div>
           )}
 
           {/* Explanation */}
-          {displaySettings.showExplanation && q.explanation && (
-            <div style={{
-              borderLeft: '3px solid var(--primary)', paddingLeft: 12, marginBottom: 10,
-              fontSize: compact ? 11 : 12, color: 'var(--muted)', lineHeight: 1.6
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2, color: 'var(--primary)' }}>Explanation</div>
-              {hl(q.explanation)}
+          {showExp&&q.explanation&&(
+            <div style={{borderLeft:'3px solid var(--primary)',paddingLeft:10,marginBottom:8,fontSize:compact?11:12,color:'var(--muted)',lineHeight:1.6}}>
+              <div style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:2,color:'var(--primary)'}}>Explanation</div>
+              {hl(q.explanation,searchQ)}
             </div>
           )}
 
-          {/* Tag */}
-          {displaySettings.showTags && q.tag && (
-            <span className="tag-chip"><I.Tag/>{q.tag}</span>
-          )}
+          {/* Tags & meta row */}
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
+            {displaySettings.showTags&&(q.tag||customTag)&&(
+              <span className="tag-chip" style={{cursor:'pointer'}} onClick={()=>onOpenTag(q.id)} title="Edit tag">
+                <I.Tag/>{customTag||q.tag}
+              </span>
+            )}
+            {!q.tag&&!customTag&&(
+              <button onClick={()=>onOpenTag(q.id)} className="tag-chip" style={{cursor:'pointer',color:'var(--muted)',fontSize:10}}>+ tag</button>
+            )}
+            {/* SR info */}
+            {srCard&&srCard.lastReviewed&&(
+              <span style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--mono)'}}>
+                SR: {srCard.repetitions}×{' '}{srCard.interval}d
+              </span>
+            )}
+            {/* Collections */}
+            {collections.map(c=>(
+              <span key={c.id} className="coll-badge" style={{color:c.color,borderColor:c.color,background:c.color+'18'}}><I.Folder/>{c.name}</span>
+            ))}
+          </div>
 
           {/* Note preview */}
-          {noteText && (
-            <div style={{ marginTop: 8, padding: '6px 10px', background: 'var(--card2)', borderRadius: 6, fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', borderLeft: '2px solid var(--yellow)', cursor: 'pointer' }}
-              onClick={() => onOpenNote(q.id)}>
-              📝 {noteText.length > 80 ? noteText.slice(0, 80) + '…' : noteText}
+          {noteText&&(
+            <div style={{marginTop:8,padding:'5px 10px',background:'var(--card2)',borderRadius:6,fontSize:11,fontFamily:'var(--mono)',color:'var(--muted)',borderLeft:'2px solid var(--yellow)',cursor:'pointer'}} onClick={()=>onOpenNote(q.id)}>
+              📝 {noteText.length>90?noteText.slice(0,90)+'…':noteText}
             </div>
           )}
         </div>
@@ -908,645 +1234,443 @@ const QuestionCard = memo(function QuestionCard({
   );
 });
 
-// ==================== PRACTICE MODE ====================
-function PracticeMode({ questions, onClose }) {
-  const [deck, setDeck] = useState(() => [...questions].sort(() => Math.random() - 0.5));
-  const [idx, setIdx] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [score, setScore] = useState({ correct: 0, wrong: 0, skipped: 0 });
-  const [done, setDone] = useState(false);
-
-  const q = deck[idx];
-  const progress = ((idx) / deck.length) * 100;
-
-  const answer = (char) => {
-    if (selected) return;
-    setSelected(char);
-    setShowAnswer(true);
-    const correct = char === q.answerKey?.toUpperCase();
-    setScore(s => ({ ...s, correct: s.correct + (correct ? 1 : 0), wrong: s.wrong + (correct ? 0 : 1) }));
-  };
-
-  const next = () => {
-    if (idx + 1 >= deck.length) { setDone(true); return; }
-    setIdx(i => i + 1);
-    setSelected(null);
-    setShowAnswer(false);
-  };
-
-  const skip = () => {
-    setScore(s => ({ ...s, skipped: s.skipped + 1 }));
-    next();
-  };
-
-  const restart = () => {
-    setDeck([...questions].sort(() => Math.random() - 0.5));
-    setIdx(0); setSelected(null); setShowAnswer(false);
-    setScore({ correct: 0, wrong: 0, skipped: 0 }); setDone(false);
-  };
-
-  if (done) {
-    const total = score.correct + score.wrong + score.skipped;
-    const pct = Math.round((score.correct / total) * 100) || 0;
-    return (
-      <div className="modal-bg">
-        <div className="modal" style={{ textAlign: 'center', maxWidth: 480 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>{pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '💪'}</div>
-          <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Session Complete!</div>
-          <div style={{ color: 'var(--muted)', marginBottom: 24 }}>{total} questions answered</div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }}>
-            <div className="stat-card" style={{ alignItems: 'center' }}>
-              <div className="stat-num" style={{ color: 'var(--green)' }}>{score.correct}</div>
-              <div className="stat-label">Correct</div>
-            </div>
-            <div className="stat-card" style={{ alignItems: 'center' }}>
-              <div className="stat-num" style={{ color: 'var(--red)' }}>{score.wrong}</div>
-              <div className="stat-label">Wrong</div>
-            </div>
-            <div className="stat-card" style={{ alignItems: 'center' }}>
-              <div className="stat-num" style={{ color: 'var(--muted)' }}>{score.skipped}</div>
-              <div className="stat-label">Skipped</div>
-            </div>
-          </div>
-
-          <div style={{ fontSize: 32, fontWeight: 800, color: pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)', marginBottom: 20 }}>
-            {pct}% Score
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            <button className="btn btn-primary" onClick={restart}>Try Again</button>
-            <button className="btn" onClick={onClose}>Exit</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="modal-bg">
-      <div className="modal">
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Practice Mode <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {idx + 1} / {deck.length}</span></div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>✓ {score.correct}</span>
-            <span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600 }}>✗ {score.wrong}</span>
-            <button className="btn btn-ghost" onClick={onClose} style={{ padding: '4px 8px' }}><I.X size={16}/></button>
-          </div>
-        </div>
-
-        {/* Progress */}
-        <div className="progress-bar" style={{ marginBottom: 20 }}>
-          <div className="progress-bar-fill" style={{ width: `${progress}%`, background: 'var(--primary)' }}/>
-        </div>
-
-        {/* Question */}
-        <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.6, marginBottom: 20 }}>
-          {q.question}
-        </div>
-
-        {/* Options */}
-        {q.options && q.options.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-            {q.options.map((opt, i) => {
-              const char = String.fromCharCode(65 + i);
-              const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
-              const isSelected = selected === char;
-              let cls = '';
-              if (showAnswer && isCorrect) cls = 'correct';
-              else if (showAnswer && isSelected && !isCorrect) cls = 'wrong';
-              return (
-                <button key={i} className={`quiz-btn ${cls}`} onClick={() => answer(char)} disabled={!!selected}>
-                  <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, marginRight: 8 }}>{char}.</span>{opt}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div>
-            {!showAnswer ? (
-              <button className="btn btn-primary" onClick={() => { setShowAnswer(true); setSelected('revealed'); }}>Reveal Answer</button>
-            ) : (
-              <div style={{ padding: '12px 16px', background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 8, color: 'var(--green)', marginBottom: 16 }}>
-                <b>Answer:</b> {q.answerKey ? q.answerKey + ' — ' : ''}{q.answerText}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Explanation */}
-        {showAnswer && q.explanation && (
-          <div style={{ borderLeft: '3px solid var(--primary)', paddingLeft: 12, fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--primary)', marginBottom: 2 }}>Explanation</div>
-            {q.explanation}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          {!selected && <button className="btn" onClick={skip}>Skip</button>}
-          {(selected || showAnswer) && <button className="btn btn-primary" onClick={next}>{idx + 1 >= deck.length ? 'Finish' : 'Next →'}</button>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ==================== REPORT MODAL ====================
-function ReportModal({ questions, favoriteIds, completedIds, notes, onClose }) {
-  const total = questions.length;
-  const completed = completedIds.size;
-  const favorites = favoriteIds.size;
-  const unsolved = total - completed;
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const notedCount = Object.values(notes).filter(n => n && n.trim()).length;
-
-  // Lesson breakdown
-  const lessonMap = {};
-  questions.forEach(q => {
-    if (!lessonMap[q.lesson]) lessonMap[q.lesson] = { total: 0, done: 0 };
-    lessonMap[q.lesson].total++;
-    if (completedIds.has(q.id)) lessonMap[q.lesson].done++;
-  });
-  const lessons = Object.entries(lessonMap).sort((a, b) => b[1].total - a[1].total);
-
-  // Tag breakdown
-  const tagMap = {};
-  questions.forEach(q => {
-    if (q.tag) {
-      if (!tagMap[q.tag]) tagMap[q.tag] = 0;
-      tagMap[q.tag]++;
-    }
-  });
-  const tags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-  return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 680 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>📊 Study Report</div>
-          <button className="btn btn-ghost" onClick={onClose}><I.X size={16}/></button>
-        </div>
-
-        {/* Summary stats */}
-        <div className="report-section">
-          <div className="report-title">Overall Progress</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 }}>
-            <div className="stat-card">
-              <div className="stat-num">{total}</div>
-              <div className="stat-label">Total Qs</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-num" style={{ color: 'var(--green)' }}>{completed}</div>
-              <div className="stat-label">Completed</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-num" style={{ color: 'var(--yellow)' }}>{unsolved}</div>
-              <div className="stat-label">Unsolved</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-num" style={{ color: 'var(--yellow)' }}>{favorites}</div>
-              <div className="stat-label">Favorites</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-num" style={{ color: 'var(--primary)' }}>{notedCount}</div>
-              <div className="stat-label">Notes</div>
-            </div>
-            <div className="stat-card" style={{ alignItems: 'center' }}>
-              <div className="stat-num" style={{ color: pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)' }}>{pct}%</div>
-              <div className="stat-label">Progress</div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 14 }}>
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${pct}%`, background: pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--primary)' }}/>
-            </div>
-          </div>
-        </div>
-
-        {/* Lesson breakdown */}
-        {lessons.length > 0 && (
-          <div className="report-section">
-            <div className="report-title">Lesson Breakdown ({lessons.length} lessons)</div>
-            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-              <table className="report-table">
-                <thead>
-                  <tr>
-                    <th>Lesson</th>
-                    <th style={{ textAlign: 'center' }}>Total</th>
-                    <th style={{ textAlign: 'center' }}>Done</th>
-                    <th style={{ width: 100 }}>Progress</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lessons.map(([lesson, data]) => {
-                    const p = Math.round((data.done / data.total) * 100);
-                    return (
-                      <tr key={lesson}>
-                        <td style={{ fontSize: 12, maxWidth: 200 }}>
-                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={lesson}>
-                            {lesson.length > 40 ? lesson.slice(0, 40) + '…' : lesson}
-                          </div>
-                        </td>
-                        <td style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12 }}>{data.total}</td>
-                        <td style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--green)' }}>{data.done}</td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div className="progress-bar" style={{ flex: 1 }}>
-                              <div className="progress-bar-fill" style={{ width: `${p}%`, background: p === 100 ? 'var(--green)' : 'var(--primary)' }}/>
-                            </div>
-                            <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--muted)', minWidth: 28, textAlign: 'right' }}>{p}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div className="report-section">
-            <div className="report-title">Top Tags</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {tags.map(([tag, count]) => (
-                <span key={tag} className="tag-chip">
-                  <I.Tag/>{tag} <span style={{ fontFamily: 'var(--mono)', color: 'var(--primary)' }}>×{count}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Export report as text */}
-        <button className="btn" onClick={() => {
-          let txt = `QnA Hub — Study Report\n${'='.repeat(40)}\n\n`;
-          txt += `Total Questions: ${total}\nCompleted: ${completed} (${pct}%)\nUnsolved: ${unsolved}\nFavorites: ${favorites}\nNotes: ${notedCount}\n\n`;
-          txt += `Lesson Breakdown:\n${'-'.repeat(30)}\n`;
-          lessons.forEach(([l, d]) => { txt += `${l}: ${d.done}/${d.total}\n`; });
-          navigator.clipboard?.writeText(txt).then(() => alert('Copied to clipboard!'));
-        }}>
-          <I.Copy/> Copy Report
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ==================== NOTE MODAL ====================
-function NoteModal({ qId, question, noteText, onSave, onClose }) {
-  const [text, setText] = useState(noteText || '');
-  return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-        <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 14 }}>📝 Note — Q{qId}</div>
-        <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{question}</div>
-        <textarea
-          className="note-area"
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="Add your notes, mnemonics, reminders..."
-          rows={6}
-          autoFocus
-        />
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => { onSave(qId, text); onClose(); }}>Save Note</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ==================== MAIN APP ====================
+// ═══════════════════════════════ MAIN APP ═══════════════════════════════
 function App() {
-  // File state
-  const [activeFile, setActiveFile] = useState(AVAILABLE_FILES[0] || "");
+  // File & data
+  const [activeFile, setActiveFile] = useState(AVAILABLE_FILES[0]||'');
   const [questions, setQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const [availableLessons, setAvailableLessons] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Interaction state (persisted to localStorage)
-  const [favoriteIds, setFavoriteIds] = useState(() => new Set(loadLocal('favorites', [])));
-  const [completedIds, setCompletedIds] = useState(() => new Set(loadLocal('completed', [])));
-  const [notes, setNotes] = useState(() => loadLocal('notes', {}));
+  // Interaction state (all persisted)
+  const [favIds, setFavIds] = useState(()=>new Set(load('favs',[])));
+  const [completedIds, setCompletedIds] = useState(()=>new Set(load('done',[])));
+  const [pinnedIds, setPinnedIds] = useState(()=>new Set(load('pins',[])));
+  const [notes, setNotes] = useState(()=>load('notes',{}));
+  const [customTags, setCustomTags] = useState(()=>load('ctags',{})); // {qId: tag}
+  const [srData, setSrData] = useState(()=>load('sr',{})); // {qId: {interval,easeFactor,repetitions,nextDue}}
+  const [wrongCounts, setWrongCounts] = useState(()=>load('wrong',{})); // {qId: count}
+  const [collections, setCollections] = useState(()=>load('collections',[]));
+  const [sessions, setSessions] = useState(()=>load('sessions',[]));
+  const [streak, setStreak] = useState(()=>load('streak',0));
 
   // View state
   const [collapsedIds, setCollapsedIds] = useState(new Set());
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dSearch, setDSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
+  const [activeCollId, setActiveCollId] = useState(null);
   const [selectedLessons, setSelectedLessons] = useState(new Set());
-  const [isLessonDropdownOpen, setIsLessonDropdownOpen] = useState(false);
+  const [lessonDDOpen, setLessonDDOpen] = useState(false);
+  const [displaySettings, setDisplaySettings] = useState(()=>load('display',{showOptions:true,showAnswer:true,showExplanation:true,showTags:true}));
+  const [compact, setCompact] = useState(()=>load('compact',false));
+  const [theme, setTheme] = useState(()=>load('theme','dark'));
 
-  const [displaySettings, setDisplaySettings] = useState(() => loadLocal('display', {
-    showOptions: true, showAnswer: true, showExplanation: true, showTags: true
-  }));
-  const [compact, setCompact] = useState(() => loadLocal('compact', false));
-  const [theme, setTheme] = useState(() => loadLocal('theme', 'dark'));
-
-  // UI state
-  const [isExporting, setIsExporting] = useState(false);
+  // UI
   const [toast, setToast] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [focusedIdx, setFocusedIdx] = useState(-1); // keyboard nav
+  // Modals
   const [showReport, setShowReport] = useState(false);
   const [showPractice, setShowPractice] = useState(false);
-  const [noteModal, setNoteModal] = useState(null); // { qId, question }
-  const [showSettings, setShowSettings] = useState(false);
+  const [practiceMode, setPracticeMode] = useState('practice'); // 'practice'|'exam'|'wrong'
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showCollections, setShowCollections] = useState(false);
+  const [noteModal, setNoteModal] = useState(null);
+  const [tagModal, setTagModal] = useState(null);
+  const [localAnsOverrides, setLocalAnsOverrides] = useState({}); // {qId: true|false}
+  const [localOptOverrides, setLocalOptOverrides] = useState({}); // {qId: true|false}
+  const [localExpOverrides, setLocalExpOverrides] = useState({}); // {qId: true|false}
 
-  const searchDebounceRef = useRef(null);
+  // Session timer
+  const sessionStartRef = useRef(Date.now());
+  const searchRef = useRef(null);
   const fileInputRef = useRef(null);
+  const searchDebRef = useRef(null);
 
-  // ---- Persistence ----
-  useEffect(() => { saveLocal('favorites', Array.from(favoriteIds)); }, [favoriteIds]);
-  useEffect(() => { saveLocal('completed', Array.from(completedIds)); }, [completedIds]);
-  useEffect(() => { saveLocal('notes', notes); }, [notes]);
-  useEffect(() => { saveLocal('display', displaySettings); }, [displaySettings]);
-  useEffect(() => { saveLocal('compact', compact); }, [compact]);
-  useEffect(() => { saveLocal('theme', theme); }, [theme]);
+  // Weak spots: wrong ≥ 3
+  const weakIds = useMemo(()=>new Set(Object.entries(wrongCounts).filter(([,c])=>c>=3).map(([id])=>parseInt(id))),[wrongCounts]);
 
-  // ---- Theme ----
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+  // ── Persistence ──
+  useEffect(()=>save('favs',Array.from(favIds)),[favIds]);
+  useEffect(()=>save('done',Array.from(completedIds)),[completedIds]);
+  useEffect(()=>save('pins',Array.from(pinnedIds)),[pinnedIds]);
+  useEffect(()=>save('notes',notes),[notes]);
+  useEffect(()=>save('ctags',customTags),[customTags]);
+  useEffect(()=>save('sr',srData),[srData]);
+  useEffect(()=>save('wrong',wrongCounts),[wrongCounts]);
+  useEffect(()=>save('collections',collections),[collections]);
+  useEffect(()=>save('sessions',sessions),[sessions]);
+  useEffect(()=>save('display',displaySettings),[displaySettings]);
+  useEffect(()=>save('compact',compact),[compact]);
+  useEffect(()=>save('theme',theme),[theme]);
 
-  // ---- Search debounce ----
-  const handleSearchChange = (val) => {
-    setSearchQuery(val);
-    clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => setDebouncedSearch(val), 200);
-  };
+  // ── Theme ──
+  useEffect(()=>{ document.documentElement.setAttribute('data-theme',theme); },[theme]);
 
-  // ---- Toast ----
-  const showToast = (msg, type = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+  // ── Reading progress rail ──
+  useEffect(()=>{
+    const onScroll = () => {
+      const el = document.documentElement;
+      const pct = el.scrollTop/(el.scrollHeight-el.clientHeight)*100;
+      const fill = document.getElementById('read-fill');
+      if (fill) fill.style.height = `${Math.min(100,pct)}%`;
+    };
+    window.addEventListener('scroll',onScroll,{passive:true});
+    return ()=>window.removeEventListener('scroll',onScroll);
+  },[]);
 
-  // ---- File loading ----
+  // ── Streak tracking ──
+  useEffect(()=>{
+    const today = new Date().toDateString();
+    const lastSession = sessions[sessions.length-1];
+    if (!lastSession || new Date(lastSession.date).toDateString()!==today) return;
+    // Recalculate streak
+    let s=0, d=new Date(); d.setHours(0,0,0,0);
+    const daySet=new Set(sessions.map(x=>new Date(x.date).toDateString()));
+    while (daySet.has(d.toDateString())) { s++; d.setDate(d.getDate()-1); }
+    setStreak(s); save('streak',s);
+  },[sessions]);
+
+  // ── Session recording ──
+  useEffect(()=>{
+    const handleUnload = () => {
+      const dur = Math.round((Date.now()-sessionStartRef.current)/1000);
+      if (dur < 30) return; // ignore very short visits
+      const newSession = { date: Date.now(), duration: dur };
+      const updated = [...load('sessions',[]), newSession].slice(-200);
+      save('sessions',updated);
+    };
+    window.addEventListener('beforeunload',handleUnload);
+    return ()=>window.removeEventListener('beforeunload',handleUnload);
+  },[]);
+
+  // ── Toast ──
+  const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+  // ── File loading ──
   const loadFile = (fileName) => {
-    setIsLoading(true);
-    setFetchError(null);
-    setSearchQuery(''); setDebouncedSearch('');
-    setSelectedLessons(new Set());
-    setCollapsedIds(new Set());
-    setActiveTab('All');
-
+    setIsLoading(true); setFetchError(null);
+    setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setCollapsedIds(new Set()); setActiveTab('All');
     fetch(fileName)
-      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-      .then(text => {
-        const { parsed, lessons } = parseTextData(text);
-        setQuestions(parsed);
-        setAvailableLessons(lessons);
-        setIsLoading(false);
-        showToast(`Loaded ${parsed.length} questions`);
-      })
-      .catch(err => {
-        setFetchError(`Cannot load "${fileName}". ${err.message}`);
-        setIsLoading(false);
-      });
+      .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+      .then(text=>{ const {parsed,lessons}=parseTextData(text); setQuestions(parsed); setAvailableLessons(lessons); setIsLoading(false); showToast(`Loaded ${parsed.length} questions`); })
+      .catch(err=>{ setFetchError(`Cannot load "${fileName}". ${err.message}`); setIsLoading(false); });
   };
 
-  // ---- File upload ----
   const handleFileUpload = (file) => {
-    if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const { parsed, lessons } = parseTextData(text);
-      setQuestions(parsed);
-      setAvailableLessons(lessons);
-      setActiveFile(file.name);
-      setSearchQuery(''); setDebouncedSearch('');
-      setSelectedLessons(new Set());
-      setCollapsedIds(new Set());
-      setActiveTab('All');
-      setFetchError(null);
+    reader.onload = e => {
+      const {parsed,lessons}=parseTextData(e.target.result);
+      setQuestions(parsed); setAvailableLessons(lessons);
+      setActiveFile(file.name); setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setCollapsedIds(new Set()); setActiveTab('All'); setFetchError(null);
       showToast(`Loaded ${parsed.length} questions from "${file.name}"`);
     };
     reader.readAsText(file);
   };
 
-  // ---- Auto-load first file ----
-  useEffect(() => {
-    if (activeFile && AVAILABLE_FILES.includes(activeFile)) loadFile(activeFile);
-  }, []);
+  useEffect(()=>{ if(activeFile&&AVAILABLE_FILES.includes(activeFile)) loadFile(activeFile); },[]);
 
-  // ---- Toggles ----
-  const toggle = (setter) => (id) => {
-    setter(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
+  // ── Toggles ──
+  const tog = setter => id => setter(prev=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
+  const toggleFav = tog(setFavIds);
+  const toggleDone = tog(setCompletedIds);
+  const togglePin = tog(setPinnedIds);
+  const toggleCollapse = tog(setCollapsedIds);
+  const toggleCollapseAll = () => { if(collapsedIds.size>0) setCollapsedIds(new Set()); else setCollapsedIds(new Set(questions.map(q=>q.id))); };
+  const toggleLesson = l => { setSelectedLessons(prev=>{ const n=new Set(prev); n.has(l)?n.delete(l):n.add(l); return n; }); };
+
+  const toggleLocalAns = (qId) => {
+    setLocalAnsOverrides(prev => {
+      const cur = prev[qId];
+      // cycle: undefined(follow global) → true(show) → false(hide) → undefined
+      if (cur === undefined) return { ...prev, [qId]: true };
+      if (cur === true) return { ...prev, [qId]: false };
+      const n = { ...prev }; delete n[qId]; return n;
     });
   };
-  const toggleFavorite = toggle(setFavoriteIds);
-  const toggleCompleted = toggle(setCompletedIds);
-  const toggleCollapse = toggle(setCollapsedIds);
-
-  const toggleCollapseAll = () => {
-    if (collapsedIds.size > 0) setCollapsedIds(new Set());
-    else setCollapsedIds(new Set(questions.map(q => q.id)));
-  };
-
-  const toggleLesson = (lesson) => {
-    setSelectedLessons(prev => {
-      const n = new Set(prev); n.has(lesson) ? n.delete(lesson) : n.add(lesson); return n;
+  const toggleLocalOpt = (qId) => {
+    setLocalOptOverrides(prev => {
+      const cur = prev[qId];
+      if (cur === undefined) return { ...prev, [qId]: true };
+      if (cur === true) return { ...prev, [qId]: false };
+      const n = { ...prev }; delete n[qId]; return n;
     });
   };
+  const toggleLocalExp = (qId) => {
+    setLocalExpOverrides(prev => {
+      const cur = prev[qId];
+      if (cur === undefined) return { ...prev, [qId]: true };
+      if (cur === true) return { ...prev, [qId]: false };
+      const n = { ...prev }; delete n[qId]; return n;
+    });
+  };
+  const saveCustomTag = (qId, tag) => { setCustomTags(prev=>({...prev,[qId]:tag})); };
 
-  const saveNote = (qId, text) => {
-    setNotes(prev => ({ ...prev, [qId]: text }));
-    showToast('Note saved');
+  const rateSR = (qId, quality) => {
+    setSrData(prev=>({ ...prev, [qId]: sm2(prev[qId], quality) }));
+  };
+  const addWrong = (qId) => {
+    setWrongCounts(prev=>({ ...prev, [qId]: (prev[qId]||0)+1 }));
+  };
+  const markDone = (qId) => {
+    setCompletedIds(prev => { const n=new Set(prev); n.add(qId); return n; });
+  };
+  const markWeak = (qId) => {
+    // Weak = wrong ≥ 3; bump count to at least 3
+    setWrongCounts(prev => ({ ...prev, [qId]: Math.max((prev[qId]||0)+1, 3) }));
   };
 
-  // ---- Filtered questions ----
-  const visibleQuestions = useMemo(() => {
-    let filtered = questions;
+  // ── Search debounce ──
+  const handleSearch = val => {
+    setSearchQuery(val);
+    clearTimeout(searchDebRef.current);
+    searchDebRef.current = setTimeout(()=>setDSearch(val), 180);
+  };
 
-    if (selectedLessons.size > 0) filtered = filtered.filter(q => selectedLessons.has(q.lesson));
+  // ── Filtered questions ──
+  const visibleQuestions = useMemo(()=>{
+    let f = questions;
 
-    const q = debouncedSearch.trim();
+    // Pinned first
+    f = [...f.filter(q=>pinnedIds.has(q.id)), ...f.filter(q=>!pinnedIds.has(q.id))];
+
+    if (selectedLessons.size>0) f=f.filter(q=>selectedLessons.has(q.lesson));
+
+    const q=dSearch.trim();
     if (q) {
-      const range = q.match(/^(\d+)\s*-\s*(\d+)$/);
-      const ids = q.match(/^(\d+\s*,\s*)*\d+$/);
-      if (range) {
-        const s = parseInt(range[1]), e = parseInt(range[2]);
-        filtered = filtered.filter(x => x.id >= s && x.id <= e);
-      } else if (ids) {
-        const idList = q.split(',').map(x => parseInt(x.trim()));
-        filtered = filtered.filter(x => idList.includes(x.id));
-      } else {
-        const lower = q.toLowerCase();
-        filtered = filtered.filter(x =>
-          x.question.toLowerCase().includes(lower) ||
-          x.options.some(o => o.toLowerCase().includes(lower)) ||
-          (x.explanation && x.explanation.toLowerCase().includes(lower)) ||
-          (x.tag && x.tag.toLowerCase().includes(lower)) ||
-          (x.answerText && x.answerText.toLowerCase().includes(lower))
-        );
+      const range=q.match(/^(\d+)\s*-\s*(\d+)$/);
+      const ids=q.match(/^(\d+\s*,\s*)*\d+$/);
+      if (range) { const s=parseInt(range[1]),e=parseInt(range[2]); f=f.filter(x=>x.id>=s&&x.id<=e); }
+      else if (ids) { const idL=q.split(',').map(x=>parseInt(x.trim())); f=f.filter(x=>idL.includes(x.id)); }
+      else {
+        const lo=q.toLowerCase();
+        f=f.filter(x=>x.question.toLowerCase().includes(lo)||x.options.some(o=>o.toLowerCase().includes(lo))||(x.explanation&&x.explanation.toLowerCase().includes(lo))||(x.tag&&x.tag.toLowerCase().includes(lo))||(customTags[x.id]&&customTags[x.id].toLowerCase().includes(lo))||(x.answerText&&x.answerText.toLowerCase().includes(lo)));
       }
     }
 
-    if (activeTab === 'Favorites') filtered = filtered.filter(x => favoriteIds.has(x.id));
-    else if (activeTab === 'Completed') filtered = filtered.filter(x => completedIds.has(x.id));
-    else if (activeTab === 'Unsolved') filtered = filtered.filter(x => !completedIds.has(x.id));
+    if (activeTab==='Favorites') f=f.filter(x=>favIds.has(x.id));
+    else if (activeTab==='Done') f=f.filter(x=>completedIds.has(x.id));
+    else if (activeTab==='Unsolved') f=f.filter(x=>!completedIds.has(x.id));
+    else if (activeTab==='SR Due') f=f.filter(x=>isDue(srData[x.id]));
+    else if (activeTab==='Weak') f=f.filter(x=>weakIds.has(x.id));
+    else if (activeTab==='Collection'&&activeCollId) {
+      const col=collections.find(c=>c.id===activeCollId);
+      if (col) f=f.filter(x=>col.qIds.includes(x.id));
+    }
 
-    return filtered;
-  }, [questions, debouncedSearch, activeTab, favoriteIds, completedIds, selectedLessons]);
+    return f;
+  },[questions,dSearch,activeTab,activeCollId,favIds,completedIds,pinnedIds,selectedLessons,srData,weakIds,collections,customTags]);
 
-  const progressPct = questions.length > 0 ? Math.round((completedIds.size / questions.length) * 100) : 0;
+  const pct = questions.length>0?Math.round((completedIds.size/questions.length)*100):0;
+  const srDueCount = useMemo(()=>questions.filter(q=>isDue(srData[q.id])).length,[questions,srData]);
 
-  // ---- Export ----
+  // ── Keyboard shortcuts ──
+  useEffect(()=>{
+    if (!questions.length) return;
+    let lastKey='', lastKeyTime=0;
+
+    const onKey = e => {
+      const tag=document.activeElement?.tagName;
+      const inInput = tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
+
+      // Ctrl shortcuts always active
+      if (e.ctrlKey||e.metaKey) {
+        if (e.key==='k'||e.key==='K') { e.preventDefault(); setShowShortcuts(v=>!v); return; }
+        if (e.key==='f'||e.key==='F') { e.preventDefault(); searchRef.current?.focus(); return; }
+        if (e.key==='r'||e.key==='R') { e.preventDefault(); setShowReport(v=>!v); return; }
+        if (e.key==='p'||e.key==='P') { e.preventDefault(); setPracticeMode('practice'); setShowPractice(true); return; }
+        if (e.key==='e'||e.key==='E') { e.preventDefault(); setPracticeMode('exam'); setShowPractice(true); return; }
+        if (e.key==='/') { e.preventDefault(); setCompact(v=>!v); return; }
+        if (e.key==='a'||e.key==='A') {
+          e.preventDefault();
+          // Ctrl+A: always toggle global answers and clear all per-card overrides
+          setLocalAnsOverrides({});
+          setDisplaySettings(p=>({...p,showAnswer:!p.showAnswer}));
+          return;
+        }
+      }
+
+      if (inInput) return;
+
+      // Double-G to top
+      const now=Date.now();
+      if (e.key==='g') {
+        if (lastKey==='g'&&now-lastKeyTime<500) { window.scrollTo({top:0,behavior:'smooth'}); setFocusedIdx(0); }
+        lastKey='g'; lastKeyTime=now; return;
+      }
+      lastKey=e.key; lastKeyTime=now;
+
+      if (e.key==='G'&&e.shiftKey) { window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); return; }
+      if (e.key==='Escape') { setDSearch(''); setSearchQuery(''); setShowShortcuts(false); setShowReport(false); return; }
+      if (e.key==='t'||e.key==='T') { setTheme(p=>{ const ids=THEMES.map(t=>t.id); const i=ids.indexOf(p); return ids[(i+1)%ids.length]; }); return; }
+
+      // Navigation
+      if (e.key==='j'||e.key==='ArrowDown') {
+        e.preventDefault();
+        setFocusedIdx(i=>{ const n=Math.min(visibleQuestions.length-1,i+1); scrollToQ(visibleQuestions[n]?.id); return n; });
+        return;
+      }
+      if (e.key==='k'||e.key==='ArrowUp') {
+        e.preventDefault();
+        setFocusedIdx(i=>{ const n=Math.max(0,i-1); scrollToQ(visibleQuestions[n]?.id); return n; });
+        return;
+      }
+
+      // Actions on focused question
+      const fq = visibleQuestions[focusedIdx];
+      if (!fq) return;
+
+      if (e.key===' ') { e.preventDefault(); toggleCollapse(fq.id); }
+      if (e.key==='f'||e.key==='F') toggleFav(fq.id);
+      if (e.key==='d'||e.key==='D') toggleDone(fq.id);
+      if (e.key==='p'||e.key==='P') togglePin(fq.id);
+      if (e.key==='n'||e.key==='N') setNoteModal({qId:fq.id,question:fq.question});
+    };
+
+    window.addEventListener('keydown', onKey);
+    return ()=>window.removeEventListener('keydown',onKey);
+  },[questions, visibleQuestions, focusedIdx, displaySettings]);
+
+  const scrollToQ = (id) => {
+    if (!id) return;
+    const el=document.getElementById(`q-${id}`);
+    if (el) el.scrollIntoView({behavior:'smooth',block:'center'});
+  };
+
+  // ── Export ──
   const exportToText = () => {
-    if (!visibleQuestions.length) return showToast('Nothing to export', 'warn');
-    let text = `QnA Hub Export\n${'='.repeat(50)}\n\n`;
-    visibleQuestions.forEach(q => {
-      text += `[ID: ${q.id}] ${q.lesson !== 'General' ? '[' + q.lesson + ']' : ''}\n${q.question}\n`;
-      if (displaySettings.showOptions && q.options.length > 0)
-        q.options.forEach((o, i) => { text += `  ${String.fromCharCode(65+i)}) ${o}\n`; });
-      if (displaySettings.showAnswer) text += `  ✓ Answer: ${q.answerKey ? q.answerKey + ' — ' : ''}${q.answerText}\n`;
-      if (displaySettings.showExplanation && q.explanation) text += `  📖 ${q.explanation}\n`;
-      if (displaySettings.showTags && q.tag) text += `  🏷 ${q.tag}\n`;
-      if (notes[q.id]) text += `  📝 Note: ${notes[q.id]}\n`;
-      text += `\n${'—'.repeat(40)}\n\n`;
+    if (!visibleQuestions.length) return showToast('Nothing to export','warn');
+    let text=`QnA Hub Export\n${'='.repeat(50)}\n\n`;
+    visibleQuestions.forEach(q=>{
+      text+=`[ID: ${q.id}] ${q.lesson!=='General'?'['+q.lesson+']':''}\n${q.question}\n`;
+      if(displaySettings.showOptions&&q.options.length>0) q.options.forEach((o,i)=>{text+=`  ${String.fromCharCode(65+i)}) ${o}\n`;});
+      if(displaySettings.showAnswer) text+=`  ✓ ${q.answerKey?q.answerKey+' — ':''}${q.answerText}\n`;
+      if(displaySettings.showExplanation&&q.explanation) text+=`  📖 ${q.explanation}\n`;
+      const tag=customTags[q.id]||q.tag; if(tag) text+=`  🏷 ${tag}\n`;
+      if(notes[q.id]) text+=`  📝 ${notes[q.id]}\n`;
+      text+=`\n${'—'.repeat(40)}\n\n`;
     });
-    navigator.clipboard?.writeText(text).then(() => showToast('Copied to clipboard!'));
+    navigator.clipboard?.writeText(text).then(()=>showToast('Copied!'));
   };
 
   const exportToPDF = () => {
-    if (!visibleQuestions.length) return showToast('Nothing to export', 'warn');
-    setIsExporting(true);
-    showToast('Generating PDF...');
-    const element = document.getElementById('q-list');
-    html2pdf().set({
-      margin: 0.5,
-      filename: `QnA_${activeTab}_${Date.now()}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, windowWidth: 900 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] }
-    }).from(element).save().then(() => {
-      setIsExporting(false); showToast('PDF exported!');
-    }).catch(() => { setIsExporting(false); showToast('PDF failed', 'error'); });
+    if(!visibleQuestions.length) return showToast('Nothing to export','warn');
+    setIsExporting(true); showToast('Generating PDF...');
+    html2pdf().set({margin:.5,filename:`QnA_${activeTab}.pdf`,image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true,windowWidth:900},jsPDF:{unit:'in',format:'letter',orientation:'portrait'}})
+      .from(document.getElementById('q-list')).save()
+      .then(()=>{setIsExporting(false);showToast('PDF exported!');})
+      .catch(()=>{setIsExporting(false);showToast('PDF failed','error');});
   };
 
-  // ---- Tabs config ----
-  const tabs = [
-    { id: 'All', label: 'All', count: questions.length, icon: <I.List/> },
-    { id: 'Unsolved', label: 'Unsolved', count: questions.length - completedIds.size, icon: <I.Warning/> },
-    { id: 'Favorites', label: 'Stars', count: favoriteIds.size, icon: <I.Star filled={activeTab==='Favorites'}/> },
-    { id: 'Completed', label: 'Done', count: completedIds.size, icon: <I.CheckCircle/> },
+  // ── Tabs ──
+  const TABS = [
+    {id:'All',label:'All',count:questions.length,cls:''},
+    {id:'Unsolved',label:'Unsolved',count:questions.length-completedIds.size,cls:'act-y'},
+    {id:'SR Due',label:'SR Due',count:srDueCount,cls:'act-p'},
+    {id:'Weak',label:'Weak',count:weakIds.size,cls:''},
+    {id:'Favorites',label:'Stars',count:favIds.size,cls:'act-y'},
+    {id:'Done',label:'Done',count:completedIds.size,cls:'act-g'},
   ];
 
-  const practicePool = useMemo(() => visibleQuestions.filter(q => q.options && q.options.length > 0), [visibleQuestions]);
+  const practicePool = useMemo(()=>visibleQuestions.filter(q=>q.options&&q.options.length>0),[visibleQuestions]);
+  const wrongPool = useMemo(()=>questions.filter(q=>wrongCounts[q.id]>0&&q.options&&q.options.length>0),[questions,wrongCounts]);
 
-  // ---- Render ----
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
 
-      {/* === HEADER === */}
-      <div className="header">
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{ width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 900 }}>Q</div>
-          <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em' }}>QnA Hub</span>
+      {/* ══ HEADER ══ */}
+      <div style={{background:'var(--surface)',borderBottom:'1px solid var(--border)',position:'sticky',top:0,zIndex:50,padding:'0 20px',height:58,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+          <div style={{width:30,height:30,background:'var(--primary)',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:15}}>Q</div>
+          <span style={{fontWeight:800,fontSize:15,letterSpacing:'-.02em'}}>QnA Hub</span>
+          {streak>0&&<span title={`${streak} day streak!`} style={{fontSize:12,display:'flex',alignItems:'center',gap:3,color:'var(--yellow)'}}><I.Flame/>×{streak}</span>}
         </div>
 
-        {/* Center: file selector & upload */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, margin: '0 16px', maxWidth: 500 }}>
-          {AVAILABLE_FILES.length > 1 && (
-            <select className="input" style={{ maxWidth: 220 }} value={activeFile} onChange={e => { setActiveFile(e.target.value); loadFile(e.target.value); }}>
-              {AVAILABLE_FILES.map(f => <option key={f} value={f}>{f}</option>)}
+        {/* Middle */}
+        <div style={{display:'flex',alignItems:'center',gap:8,flex:1,margin:'0 12px',maxWidth:480}}>
+          {AVAILABLE_FILES.length>1&&(
+            <select className="input" style={{maxWidth:200}} value={activeFile} onChange={e=>{setActiveFile(e.target.value);loadFile(e.target.value);}}>
+              {AVAILABLE_FILES.map(f=><option key={f} value={f}>{f}</option>)}
             </select>
           )}
-          <button className="btn" onClick={() => fileInputRef.current?.click()} title="Upload .txt or .csv file">
-            <I.Upload/> <span style={{ display: window.innerWidth > 500 ? undefined : 'none' }}>Upload</span>
-          </button>
-          <input ref={fileInputRef} type="file" accept=".txt,.csv,.tsv" style={{ display: 'none' }}
-            onChange={e => { if (e.target.files[0]) handleFileUpload(e.target.files[0]); }}
-          />
+          <button className="btn" onClick={()=>fileInputRef.current?.click()}><I.Upload/><span>Upload</span></button>
+          <input ref={fileInputRef} type="file" accept=".txt,.csv,.tsv" style={{display:'none'}} onChange={e=>{if(e.target.files[0])handleFileUpload(e.target.files[0]);}}/>
         </div>
 
-        {/* Right: actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {questions.length > 0 && <>
-            <button className="btn btn-ghost" onClick={() => setShowReport(true)} title="Report">
-              <I.BarChart/>
-            </button>
-            {practicePool.length > 0 && (
-              <button className="btn btn-primary" onClick={() => setShowPractice(true)} style={{ padding: '7px 12px' }}>
-                <I.Brain/> <span style={{ display: window.innerWidth > 600 ? undefined : 'none' }}>Practice</span>
-              </button>
+        {/* Right */}
+        <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
+          {questions.length>0&&<>
+            <button className="btn ghost" onClick={()=>setShowCollections(true)} title="Collections"><I.Folder/></button>
+            <button className="btn ghost" onClick={()=>setShowReport(true)} title="Report (Ctrl+R)"><I.Chart/></button>
+            {practicePool.length>0&&(
+              <div style={{position:'relative',display:'flex',gap:4}}>
+                <button className="btn primary" onClick={()=>{setPracticeMode('practice');setShowPractice(true);}} style={{padding:'6px 10px'}}><I.Brain/> Practice</button>
+                <button className="btn primary" onClick={()=>{setPracticeMode('exam');setShowPractice(true);}} style={{padding:'6px 10px',fontSize:11}}>📝 Exam</button>
+                {wrongPool.length>0&&<button className="btn danger" onClick={()=>{setPracticeMode('wrong');setShowPractice(true);}} style={{padding:'6px 10px',fontSize:11}}>❌ Wrong</button>}
+              </div>
             )}
           </>}
-          {/* Theme toggle */}
-          <button className="btn btn-ghost" onClick={() => {
-            const t = theme === 'dark' ? 'light' : theme === 'light' ? 'sepia' : 'dark';
-            setTheme(t);
-          }} title="Toggle theme">
-            {theme === 'dark' ? <I.Sun/> : theme === 'light' ? <I.Moon/> : '📜'}
-          </button>
+          <button className="btn ghost" onClick={()=>setShowShortcuts(true)} title="Keyboard shortcuts (Ctrl+K)"><I.Keyboard/></button>
+          <select
+            value={theme}
+            onChange={e=>setTheme(e.target.value)}
+            title="Choose theme (T cycles)"
+            style={{background:'var(--card2)',border:'1px solid var(--border2)',borderRadius:'var(--rs)',color:'var(--text)',fontFamily:'var(--font)',fontSize:12,padding:'6px 8px',cursor:'pointer',outline:'none'}}
+          >
+            {THEMES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* === TABS + PROGRESS === */}
-      {questions.length > 0 && (
-        <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 24px', position: 'sticky', top: 60, zIndex: 40 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, maxWidth: 1200, margin: '0 auto', height: 52 }}>
-            <div style={{ display: 'flex', gap: 4, overflow: 'auto', paddingBottom: 2 }}>
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  className={`tab-btn ${activeTab === tab.id ? (tab.id === 'Unsolved' ? 'active-unsolved' : tab.id === 'Favorites' ? 'active-fav' : 'active') : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.icon} {tab.label}
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.8, background: 'rgba(255,255,255,0.15)', padding: '1px 5px', borderRadius: 4 }}>
-                    {tab.count}
-                  </span>
+      {/* ══ TABS + PROGRESS ══ */}
+      {questions.length>0&&(
+        <div style={{background:'var(--surface)',borderBottom:'1px solid var(--border)',padding:'0 20px',position:'sticky',top:58,zIndex:40}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,maxWidth:1200,margin:'0 auto',height:48}}>
+            <div style={{display:'flex',gap:3,overflowX:'auto',paddingBottom:2}}>
+              {TABS.map(tab=>(
+                <button key={tab.id} className={`tab-btn ${activeTab===tab.id?tab.cls||'active':''}`} onClick={()=>{setActiveTab(tab.id);setActiveCollId(null);}}>
+                  {tab.label}
+                  <span style={{fontFamily:'var(--mono)',fontSize:10,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>{tab.count}</span>
+                </button>
+              ))}
+              {/* Collection tabs */}
+              {collections.map(c=>(
+                <button key={c.id} className={`tab-btn ${activeTab==='Collection'&&activeCollId===c.id?'active':''}`}
+                  onClick={()=>{setActiveTab('Collection');setActiveCollId(c.id);}}>
+                  <div style={{width:7,height:7,borderRadius:'50%',background:c.color,flexShrink:0}}/>
+                  {c.name}
+                  <span style={{fontFamily:'var(--mono)',fontSize:10,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>{c.qIds.length}</span>
                 </button>
               ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{progressPct}%</span>
-              <div className="progress-bar" style={{ width: 100 }}>
-                <div className="progress-bar-fill" style={{ width: `${progressPct}%`, background: progressPct >= 80 ? 'var(--green)' : 'var(--primary)' }}/>
-              </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+              <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--mono)'}}>{pct}%</span>
+              <div className="pb" style={{width:80}}><div className="pb-fill" style={{width:`${pct}%`,background:pct>=80?'var(--green)':'var(--primary)'}}/></div>
             </div>
           </div>
         </div>
       )}
 
-      {/* === TOOLBAR === */}
-      {questions.length > 0 && !isLoading && (
-        <div style={{ background: 'var(--surface)', padding: '12px 24px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+      {/* ══ TOOLBAR ══ */}
+      {questions.length>0&&!isLoading&&(
+        <div style={{background:'var(--surface)',padding:'10px 20px',borderBottom:'1px solid var(--border)'}}>
+          <div style={{maxWidth:1200,margin:'0 auto',display:'flex',flexWrap:'wrap',gap:8,alignItems:'center'}}>
 
             {/* Lesson filter */}
-            <div style={{ position: 'relative', minWidth: 180 }}>
-              <button className="btn" onClick={() => setIsLessonDropdownOpen(v => !v)} style={{ width: '100%' }}>
-                <I.Filter/>
-                {selectedLessons.size === 0 ? 'All Lessons' : `${selectedLessons.size} lesson(s)`}
-                <I.ChevronDown/>
+            <div style={{position:'relative'}}>
+              <button className="btn" onClick={()=>setLessonDDOpen(v=>!v)}>
+                <I.Filter/>{selectedLessons.size===0?'All Lessons':`${selectedLessons.size} lesson(s)`}<I.Cd/>
               </button>
-              {isLessonDropdownOpen && (
-                <div className="dropdown" style={{ width: 280 }}>
-                  <div className="dropdown-item" onClick={() => { setSelectedLessons(new Set()); setIsLessonDropdownOpen(false); }}
-                    style={{ color: 'var(--primary)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>
-                    ✕ Clear filter
-                  </div>
-                  {availableLessons.map(l => (
-                    <div key={l} className="dropdown-item" onClick={() => toggleLesson(l)}>
-                      <input type="checkbox" checked={selectedLessons.has(l)} onChange={() => {}} style={{ accentColor: 'var(--primary)' }}/>
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l}>{l}</span>
+              {lessonDDOpen&&(
+                <div className="dropdown" style={{width:280}}>
+                  <div className="dd-item" onClick={()=>{setSelectedLessons(new Set());setLessonDDOpen(false);}} style={{color:'var(--primary)',fontWeight:700,borderBottom:'1px solid var(--border)'}}>✕ Clear filter</div>
+                  {availableLessons.map(l=>(
+                    <div key={l} className="dd-item" onClick={()=>toggleLesson(l)}>
+                      <input type="checkbox" checked={selectedLessons.has(l)} onChange={()=>{}} style={{accentColor:'var(--primary)'}}/>
+                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={l}>{l}</span>
                     </div>
                   ))}
                 </div>
@@ -1554,197 +1678,153 @@ function App() {
             </div>
 
             {/* Search */}
-            <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}><I.Search/></div>
-              <input
-                className="input"
-                style={{ paddingLeft: 34 }}
-                placeholder="Search text, ID, or range (e.g. 1-50)..."
-                value={searchQuery}
-                onChange={e => handleSearchChange(e.target.value)}
-              />
-              {searchQuery && (
-                <button onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }}
-                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}>
-                  <I.X/>
-                </button>
-              )}
+            <div style={{position:'relative',flex:1,minWidth:200}}>
+              <div style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'var(--muted)'}}><I.Search/></div>
+              <input ref={searchRef} className="input" style={{paddingLeft:32}} placeholder="Search, ID, or range (1-50)... (Ctrl+F)" value={searchQuery} onChange={e=>handleSearch(e.target.value)}/>
+              {searchQuery&&<button onClick={()=>{setSearchQuery('');setDSearch('');}} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--muted)'}}><I.X/></button>}
             </div>
 
-            {/* Display toggles */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {[
-                { key: 'showOptions', label: 'Options' },
-                { key: 'showAnswer', label: 'Answers' },
-                { key: 'showExplanation', label: 'Explain' },
-                { key: 'showTags', label: 'Tags' },
-              ].map(s => (
-                <button key={s.key} className="btn" onClick={() => setDisplaySettings(p => ({ ...p, [s.key]: !p[s.key] }))}
-                  style={{ padding: '6px 10px', fontSize: 12, ...(displaySettings[s.key] ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' } : { opacity: 0.6 }) }}>
-                  {displaySettings[s.key] ? <I.Eye/> : <I.EyeOff/>} {s.label}
+            {/* Display */}
+            <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+              {[{k:'showOptions',l:'Options'},{k:'showAnswer',l:'Answers'},{k:'showExplanation',l:'Explain'},{k:'showTags',l:'Tags'}].map(s=>(
+                <button key={s.k} className="btn" onClick={()=>{
+                  if(s.k==='showAnswer') setLocalAnsOverrides({});
+                  if(s.k==='showOptions') setLocalOptOverrides({});
+                  if(s.k==='showExplanation') setLocalExpOverrides({});
+                  setDisplaySettings(p=>({...p,[s.k]:!p[s.k]}));
+                }} style={{fontSize:11,padding:'5px 9px',...(displaySettings[s.k]?{background:'var(--primary)',color:'#fff',borderColor:'var(--primary)'}:{opacity:.6})}}>
+                  {displaySettings[s.k]?<I.Eye/>:<I.EyeOff/>} {s.l}
                 </button>
               ))}
-              <button className="btn" onClick={() => setCompact(v => !v)}
-                style={{ padding: '6px 10px', fontSize: 12, ...(compact ? { background: 'var(--card2)', borderColor: 'var(--border2)' } : {}) }}>
-                {compact ? '⊡ Normal' : '⊟ Compact'}
+              <button className="btn" onClick={()=>setCompact(v=>!v)} style={{fontSize:11,padding:'5px 9px',...(compact?{background:'var(--card2)'}:{opacity:.7})}}>
+                {compact?'⊡ Normal':'⊟ Compact'}
               </button>
-              <button className="btn" onClick={toggleCollapseAll} style={{ padding: '6px 10px', fontSize: 12 }}>
-                {collapsedIds.size > 0 ? '↕ Expand' : '↕ Collapse'}
+              <button className="btn" onClick={toggleCollapseAll} style={{fontSize:11,padding:'5px 9px'}}>
+                {collapsedIds.size>0?'↕ Expand':'↕ Collapse'}
               </button>
             </div>
 
-            {/* Spacer */}
-            <div style={{ flex: 1 }}/>
-
-            {/* Export buttons */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button className="btn" onClick={exportToText}><I.Copy/> Copy</button>
-              <button className="btn" onClick={exportToPDF} disabled={isExporting}>
-                {isExporting ? <I.Loader/> : <I.Download/>} PDF
-              </button>
+            <div style={{flex:1}}/>
+            <div style={{display:'flex',gap:6}}>
+              <button className="btn" onClick={exportToText} style={{fontSize:11}}><I.Copy/> Copy</button>
+              <button className="btn" onClick={exportToPDF} disabled={isExporting} style={{fontSize:11}}>{isExporting?<I.Loader/>:<I.Download/>} PDF</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* === MAIN CONTENT === */}
-      <main style={{ flex: 1, maxWidth: 1200, width: '100%', margin: '0 auto', padding: '20px 24px', boxSizing: 'border-box' }}>
+      {/* ══ MAIN ══ */}
+      <main style={{flex:1,maxWidth:1200,width:'100%',margin:'0 auto',padding:'18px 20px',boxSizing:'border-box'}}>
 
-        {/* Upload drop zone (when no questions) */}
-        {!isLoading && !fetchError && questions.length === 0 && (
-          <div
-            className={`upload-zone ${isDragOver ? 'drag-over' : ''} animate-fade-in`}
-            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={e => {
-              e.preventDefault(); setIsDragOver(false);
-              const f = e.dataTransfer.files[0];
-              if (f) handleFileUpload(f);
-            }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Drop your question file here</div>
-            <div style={{ color: 'var(--muted)', fontSize: 13 }}>or click to browse — supports .txt, .csv, .tsv (Anki format)</div>
+        {/* Drop zone */}
+        {!isLoading&&!fetchError&&questions.length===0&&(
+          <div className={`upload-zone ${isDragOver?'drag':''} afu`}
+            onDragOver={e=>{e.preventDefault();setIsDragOver(true);}} onDragLeave={()=>setIsDragOver(false)}
+            onDrop={e=>{e.preventDefault();setIsDragOver(false);const f=e.dataTransfer.files[0];if(f)handleFileUpload(f);}}
+            onClick={()=>fileInputRef.current?.click()}>
+            <div style={{fontSize:40,marginBottom:12}}>📂</div>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>Drop your question file here</div>
+            <div style={{color:'var(--muted)',fontSize:13}}>or click to browse — supports .txt, .csv, .tsv (Anki format)</div>
           </div>
         )}
 
         {/* Loading */}
-        {isLoading && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 80, gap: 16 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 600 }}>
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="shimmer" style={{ height: compact ? 60 : 90, borderRadius: 12, animationDelay: `${i * 0.1}s` }}/>
-              ))}
-            </div>
-            <div style={{ color: 'var(--muted)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <I.Loader/> Parsing questions...
-            </div>
+        {isLoading&&(
+          <div style={{display:'flex',flexDirection:'column',gap:10,maxWidth:700,margin:'0 auto',paddingTop:20}}>
+            {[...Array(6)].map((_,i)=><div key={i} className="shimmer" style={{height:compact?55:85,borderRadius:12}}/>)}
           </div>
         )}
 
         {/* Error */}
-        {fetchError && !isLoading && (
-          <div style={{ textAlign: 'center', padding: 60 }} className="animate-fade-in">
-            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: 'var(--red)' }}>Failed to load file</div>
-            <div style={{ color: 'var(--muted)', fontSize: 13, maxWidth: 400, margin: '0 auto 20px' }}>{fetchError}</div>
-            <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>Upload Manually</button>
+        {fetchError&&!isLoading&&(
+          <div style={{textAlign:'center',padding:60}} className="afu">
+            <div style={{fontSize:32,marginBottom:10}}>⚠️</div>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:8,color:'var(--red)'}}>Failed to load</div>
+            <div style={{color:'var(--muted)',fontSize:13,maxWidth:400,margin:'0 auto 16px'}}>{fetchError}</div>
+            <button className="btn primary" onClick={()=>fileInputRef.current?.click()}>Upload Manually</button>
           </div>
         )}
 
-        {/* Questions list */}
-        {!isLoading && !fetchError && questions.length > 0 && (
+        {/* Streak heatmap */}
+        {!isLoading&&!fetchError&&questions.length>0&&sessions.length>0&&(
+          <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <span style={{fontSize:11,color:'var(--muted)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em'}}>Study activity (90d)</span>
+            <StreakHeatmap sessions={sessions}/>
+            {streak>0&&<span style={{fontSize:12,color:'var(--yellow)',fontWeight:700,display:'flex',alignItems:'center',gap:4}}><I.Flame/>{streak} day streak</span>}
+          </div>
+        )}
+
+        {/* Questions */}
+        {!isLoading&&!fetchError&&questions.length>0&&(
           <>
-            {/* Result count */}
-            <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 14, fontFamily: 'var(--mono)' }}>
-              {visibleQuestions.length === questions.length
-                ? `Showing all ${questions.length} questions`
-                : `Showing ${visibleQuestions.length} of ${questions.length} questions`
-              }
-              {debouncedSearch && <span> for "<b style={{ color: 'var(--text)' }}>{debouncedSearch}</b>"</span>}
+            <div style={{color:'var(--muted)',fontSize:11,marginBottom:12,fontFamily:'var(--mono)',display:'flex',alignItems:'center',gap:12}}>
+              <span>Showing {visibleQuestions.length} of {questions.length}</span>
+              {dSearch&&<span>for "<b style={{color:'var(--text)'}}>{dSearch}</b>"</span>}
+              {focusedIdx>=0&&visibleQuestions[focusedIdx]&&<span style={{color:'var(--primary)'}}>focused: Q{visibleQuestions[focusedIdx].id} (J/K to navigate)</span>}
             </div>
 
-            {visibleQuestions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 60, border: '2px dashed var(--border2)', borderRadius: 16, color: 'var(--muted)' }} className="animate-fade-in">
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>No questions match</div>
-                <div style={{ fontSize: 13 }}>Try adjusting your search or filters</div>
+            {visibleQuestions.length===0?(
+              <div style={{textAlign:'center',padding:60,border:'2px dashed var(--border2)',borderRadius:16,color:'var(--muted)'}} className="afu">
+                <div style={{fontSize:32,marginBottom:8}}>🔍</div>
+                <div style={{fontWeight:600,marginBottom:4}}>No questions match</div>
+                <div style={{fontSize:13}}>Adjust search or filters</div>
               </div>
-            ) : (
+            ):(
               <div id="q-list">
-                {visibleQuestions.map((q) => (
-                  <QuestionCard
-                    key={q.id}
-                    q={q}
-                    isCollapsed={collapsedIds.has(q.id)}
-                    isFavorite={favoriteIds.has(q.id)}
-                    isCompleted={completedIds.has(q.id)}
-                    isUnsolved={!completedIds.has(q.id)}
-                    displaySettings={displaySettings}
-                    searchQuery={debouncedSearch}
-                    onToggleCollapse={toggleCollapse}
-                    onToggleFavorite={toggleFavorite}
-                    onToggleCompleted={toggleCompleted}
-                    onOpenNote={(qId) => setNoteModal({ qId, question: q.question })}
-                    noteText={notes[q.id] || ''}
-                    compact={compact}
-                  />
-                ))}
+                {visibleQuestions.map((q,i)=>{
+                  const qCollections = collections.filter(c=>c.qIds.includes(q.id));
+                  return (
+                    <QuestionCard key={q.id} q={q}
+                      isCollapsed={collapsedIds.has(q.id)} isFav={favIds.has(q.id)}
+                      isDone={completedIds.has(q.id)} isPinned={pinnedIds.has(q.id)}
+                      isWeak={weakIds.has(q.id)} srCard={srData[q.id]} isDue={isDue(srData[q.id])}
+                      displaySettings={displaySettings} searchQ={dSearch}
+                      onToggleCollapse={toggleCollapse} onToggleFav={toggleFav}
+                      onToggleDone={toggleDone} onTogglePin={togglePin}
+                      onOpenNote={qId=>setNoteModal({qId,question:q.question})}
+                      noteText={notes[q.id]||''} onOpenTag={qId=>setTagModal({qId,question:q.question})}
+                      customTag={customTags[q.id]||''}
+                      compact={compact} collections={qCollections}
+                      focused={focusedIdx===i} onFocusClick={()=>setFocusedIdx(i)}
+                      localAnsOverride={localAnsOverrides[q.id]}
+                      onToggleLocalAns={toggleLocalAns}
+                      localOptOverride={localOptOverrides[q.id]}
+                      onToggleLocalOpt={toggleLocalOpt}
+                      localExpOverride={localExpOverrides[q.id]}
+                      onToggleLocalExp={toggleLocalExp}
+                    />
+                  );
+                })}
               </div>
             )}
           </>
         )}
       </main>
 
-      {/* === MODALS === */}
-      {showReport && (
-        <ReportModal
-          questions={questions}
-          favoriteIds={favoriteIds}
-          completedIds={completedIds}
-          notes={notes}
-          onClose={() => setShowReport(false)}
-        />
-      )}
-
-      {showPractice && (
+      {/* ══ MODALS ══ */}
+      {showReport&&<ReportModal questions={questions} favIds={favIds} completedIds={completedIds} notes={notes} srData={srData} weakIds={weakIds} sessions={sessions} streak={streak} onClose={()=>setShowReport(false)}/>}
+      {showPractice&&(
         <PracticeMode
-          questions={practicePool}
-          onClose={() => setShowPractice(false)}
+          questions={practiceMode==='wrong'?wrongPool:practiceMode==='exam'?practicePool.slice(0,Math.min(40,practicePool.length)):practicePool}
+          mode={practiceMode} onClose={()=>setShowPractice(false)} onRateSR={rateSR} weakIds={weakIds} onAddWrong={addWrong} onMarkDone={markDone} onMarkWeak={markWeak}
         />
       )}
+      {showShortcuts&&<ShortcutsPanel onClose={()=>setShowShortcuts(false)}/>}
+      {showCollections&&<CollectionsModal questions={questions} collections={collections} onSave={c=>{setCollections(c);setShowCollections(false);showToast('Collections saved');}} onClose={()=>setShowCollections(false)} pinnedIds={pinnedIds} favIds={favIds} completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts).map(Number))}/>}
+      {noteModal&&<NoteModal qId={noteModal.qId} question={noteModal.question} noteText={notes[noteModal.qId]||''} onSave={saveNote} onClose={()=>setNoteModal(null)}/>}
+      {tagModal&&<TagEditModal qId={tagModal.qId} question={tagModal.question} currentTag={customTags[tagModal.qId]||''} onSave={saveCustomTag} onClose={()=>setTagModal(null)}/>}
 
-      {noteModal && (
-        <NoteModal
-          qId={noteModal.qId}
-          question={noteModal.question}
-          noteText={notes[noteModal.qId] || ''}
-          onSave={saveNote}
-          onClose={() => setNoteModal(null)}
-        />
-      )}
-
-      {/* === TOAST === */}
-      {toast && (
-        <div className="toast" style={{
-          background: toast.type === 'error' ? 'var(--red)' : toast.type === 'warn' ? 'var(--yellow)' : 'var(--green)',
-          color: '#fff'
-        }}>
-          {toast.type === 'error' ? '⚠' : toast.type === 'warn' ? '⚠' : '✓'} {toast.msg}
-        </div>
-      )}
+      {/* ══ TOAST ══ */}
+      {toast&&<div className="toast" style={{background:toast.type==='error'?'var(--red)':toast.type==='warn'?'var(--yellow)':'var(--green)',color:'#fff'}}>{toast.type==='error'?'⚠':toast.type==='warn'?'⚠':'✓'} {toast.msg}</div>}
 
       {/* Close dropdowns on outside click */}
-      {isLessonDropdownOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setIsLessonDropdownOpen(false)}/>
-      )}
+      {lessonDDOpen&&<div style={{position:'fixed',inset:0,zIndex:50}} onClick={()=>setLessonDDOpen(false)}/>}
     </div>
   );
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+root.render(<App/>);
 </script>
 </body>
 </html>
