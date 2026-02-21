@@ -2280,6 +2280,7 @@ function App() {
                 <div style={{fontSize:13}}>Adjust search or filters</div>
               </div>
             ):(
+              <>
               {/* Bulk action bar (sticky, shown in bulk mode) */}
               {bulkMode && (
                 <div className="bulk-bar">
@@ -2348,6 +2349,7 @@ function App() {
                   );
                 })}
               </div>
+              </>
             )}
           </>
         )}
