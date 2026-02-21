@@ -1,915 +1,1750 @@
 <!DOCTYPE html>
-<html lang="en">     
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QnA Hub - File Parser & Viewer</title>
-    
-    <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QnA Hub — Study Intelligence</title>
 
-    <!-- html2pdf for robust PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin></script>
-    
-    <!-- Tailwind Config for Dynamic Themes -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        themeBg: 'var(--bg)',
-                        themeCard: 'var(--card)',
-                        themeText: 'var(--text)',
-                        themePrimary: 'var(--primary)',
-                        themeBorder: 'var(--border)',
-                    }
-                }
-            }
-        }
-    </script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin></script>
 
-    <style>
-        /* Base styles mapped to CSS variables */
-        :root {
-            --bg: #f3f4f6;
-            --card: #ffffff;
-            --text: #1f2937;
-            --primary: #3b82f6;
-            --border: #e5e7eb;
-        }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
+<style>
+:root {
+  --bg: #0d0f14;
+  --surface: #141720;
+  --card: #1a1e2a;
+  --card2: #1f2436;
+  --text: #e8eaf0;
+  --muted: #8892a4;
+  --primary: #5b8dee;
+  --primary-glow: rgba(91,141,238,0.18);
+  --green: #3ecf8e;
+  --green-glow: rgba(62,207,142,0.15);
+  --yellow: #f5a623;
+  --yellow-glow: rgba(245,166,35,0.15);
+  --red: #f06058;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.6);
+  --font: 'Sora', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        
-        .dropdown-scroll { max-height: 300px; overflow-y: auto; }
-    </style>
+[data-theme="light"] {
+  --bg: #f0f2f7;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card2: #f7f8fc;
+  --text: #1a1f2e;
+  --muted: #6b7280;
+  --primary: #3b6fd4;
+  --primary-glow: rgba(59,111,212,0.12);
+  --green: #059669;
+  --green-glow: rgba(5,150,105,0.1);
+  --yellow: #d97706;
+  --yellow-glow: rgba(217,119,6,0.1);
+  --red: #dc2626;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+}
+
+[data-theme="sepia"] {
+  --bg: #f5edd8;
+  --surface: #fffbf2;
+  --card: #fffbf2;
+  --card2: #fdf5e0;
+  --text: #3d2b1f;
+  --muted: #8b7355;
+  --primary: #c0622d;
+  --primary-glow: rgba(192,98,45,0.12);
+  --green: #5a7a3a;
+  --green-glow: rgba(90,122,58,0.12);
+  --yellow: #b8860b;
+  --yellow-glow: rgba(184,134,11,0.1);
+  --red: #a0392a;
+  --border: rgba(0,0,0,0.1);
+  --border2: rgba(0,0,0,0.18);
+  --shadow: 0 2px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.15);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; opacity: 0.6; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-fade-up { animation: fadeUp 0.35s ease-out both; }
+.animate-fade-in { animation: fadeIn 0.25s ease-out both; }
+.animate-slide-in { animation: slideIn 0.25s ease-out both; }
+.animate-spin { animation: spin 0.8s linear infinite; }
+.animate-pulse { animation: pulse 1.5s ease-in-out infinite; }
+
+/* Stagger utility */
+.stagger > * { animation: fadeUp 0.3s ease-out both; }
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger > *:nth-child(n+6) { animation-delay: 0.18s; }
+
+/* Glassmorphism card */
+.glass {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Btn */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--card2);
+  color: var(--text);
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: var(--font);
+}
+.btn:hover { background: var(--surface); border-color: var(--primary); color: var(--primary); }
+.btn.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.btn-primary:hover { opacity: 0.88; }
+.btn.btn-ghost { background: transparent; border-color: transparent; }
+.btn.btn-ghost:hover { background: var(--card2); border-color: var(--border); color: var(--primary); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Input */
+.input {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 8px 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  width: 100%;
+}
+.input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+.input::placeholder { color: var(--muted); }
+
+/* Tab */
+.tab-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: var(--font);
+}
+.tab-btn:hover { color: var(--text); background: var(--card2); }
+.tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 12px var(--primary-glow); }
+.tab-btn.active-unsolved { background: var(--yellow); color: #fff; box-shadow: 0 2px 12px var(--yellow-glow); }
+.tab-btn.active-fav { background: var(--yellow); color: #fff; }
+
+/* Tag chip */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 6px;
+  background: var(--card2);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+}
+
+/* Stat card */
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-num { font-size: 28px; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Option rows */
+.opt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  font-size: 14px;
+  transition: background 0.15s;
+}
+.opt-row.correct { background: var(--green-glow); border-color: var(--green); color: var(--green); }
+.opt-row.selected-wrong { background: rgba(240,96,88,0.12); border-color: var(--red); color: var(--red); }
+
+/* Practice mode */
+.quiz-btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 2px solid var(--border2);
+  background: var(--card2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+}
+.quiz-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-glow); }
+.quiz-btn.correct { border-color: var(--green); background: var(--green-glow); color: var(--green); font-weight: 600; }
+.quiz-btn.wrong { border-color: var(--red); background: rgba(240,96,88,0.12); color: var(--red); }
+.quiz-btn:disabled { cursor: default; }
+
+/* Report */
+.report-section { margin-bottom: 28px; }
+.report-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
+
+/* Dropdown */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  overflow: hidden;
+  animation: fadeUp 0.15s ease-out;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.dropdown-item:hover { background: var(--card2); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastIn 0.3s ease-out;
+  max-width: 320px;
+}
+
+/* Section splitter */
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* Mono ID badge */
+.id-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--primary-glow);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  font-weight: 500;
+}
+
+/* Scrollable pill row */
+.pill-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.pill-row::-webkit-scrollbar { height: 3px; }
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+}
+
+/* Compact question card */
+.q-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+.q-card:hover { border-color: var(--border2); }
+.q-card.completed { border-left: 3px solid var(--green); opacity: 0.85; }
+.q-card.unsolved { border-left: 3px solid var(--yellow); }
+
+/* Tooltip */
+.tooltip-wrap { position: relative; }
+.tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 999;
+}
+.tooltip-wrap:hover .tooltip { display: block; }
+
+/* Sidebar overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  animation: fadeIn 0.2s;
+}
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 360px;
+  max-width: 95vw;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border2);
+  z-index: 201;
+  overflow-y: auto;
+  animation: slideIn 0.25s ease-out;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Header */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .sidebar { width: 100vw; }
+  .header { padding: 0 14px; }
+  .toast { right: 14px; bottom: 14px; }
+}
+
+/* Shimmer loading */
+.shimmer {
+  background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+  background-size: 200% auto;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: 6px;
+}
+
+/* Modal */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+  animation: fadeUp 0.25s ease-out;
+}
+
+/* Note textarea */
+.note-area {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 10px;
+  resize: vertical;
+  min-height: 70px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.note-area:focus { border-color: var(--primary); }
+
+/* Progress ring */
+.ring { transform: rotate(-90deg); }
+
+/* Table */
+table.report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.report-table th { text-align: left; padding: 8px 12px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid var(--border2); }
+table.report-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+table.report-table tr:last-child td { border-bottom: none; }
+
+/* Highlight search match */
+mark { background: var(--primary-glow); color: var(--primary); border-radius: 3px; padding: 0 2px; font-weight: 700; }
+</style>
 </head>
 <body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
-
-        // =========================================================================
-        // 📁 CONFIGURATION: ADD YOUR FILES HERE
-        // =========================================================================
-        // 1. Put your files in the exact same folder as this HTML file.
-        // 2. Add their exact names to this list.
-        const AVAILABLE_FILES = [
-            "Infections.txt"
-            // Example: "Another File.txt",
-            // Example: "Chapter 2 Questions.csv"
-        ];
-        // =========================================================================
-
-        // --- SVGs ---
-        const Icons = {
-            Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
-            Copy: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
-            FileText: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
-            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
-            Eye: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
-            EyeOff: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>,
-            Palette: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>,
-            Tag: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>,
-            Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
-            Loader: () => <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>,
-            Minimize: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>,
-            Star: ({filled}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={filled ? "text-yellow-400" : "opacity-50 hover:opacity-100 transition-opacity"}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>,
-            Circle: () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40 hover:opacity-100 transition-opacity"><circle cx="12" cy="12" r="10"></circle></svg>,
-            CheckCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01" stroke="white" strokeWidth="3"></polyline></svg>,
-            ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>,
-            ChevronUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>,
-            List: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>,
-            Filter: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
-            Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        };
-
-        // --- Themes Configuration ---
-        const THEMES = [
-            { name: 'Light', vars: { '--bg': '#f3f4f6', '--card': '#ffffff', '--text': '#1f2937', '--primary': '#3b82f6', '--border': '#e5e7eb' } },
-            { name: 'Dark', vars: { '--bg': '#111827', '--card': '#1f2937', '--text': '#f9fafb', '--primary': '#60a5fa', '--border': '#374151' } },
-            { name: 'Sepia', vars: { '--bg': '#f4ecd8', '--card': '#fffbf0', '--text': '#433422', '--primary': '#d97706', '--border': '#d6c5a5' } }
-            // Additional themes removed for brevity, but dynamic custom theme still fully works!
-        ];
-
-        // --- Main App Component ---
-        function App() {
-            const [activeFile, setActiveFile] = useState(AVAILABLE_FILES[0] || "");
-            const [questions, setQuestions] = useState([]);
-            const [isLoading, setIsLoading] = useState(true);
-            const [fetchError, setFetchError] = useState(null);
-            
-            // Interaction State
-            const [favoriteIds, setFavoriteIds] = useState(new Set());
-            const [completedIds, setCompletedIds] = useState(new Set());
-            const [collapsedIds, setCollapsedIds] = useState(new Set());
-            
-            // View & Filter State
-            const [searchQuery, setSearchQuery] = useState("");
-            const [activeTab, setActiveTab] = useState('All'); 
-            const [isExporting, setIsExporting] = useState(false);
-            
-            // Lesson Filtering
-            const [availableLessons, setAvailableLessons] = useState([]);
-            const [selectedLessons, setSelectedLessons] = useState(new Set());
-            const [isLessonDropdownOpen, setIsLessonDropdownOpen] = useState(false);
-
-            const [displaySettings, setDisplaySettings] = useState({
-                showOptions: true,
-                showAnswer: true,
-                showExplanation: true,
-                showTags: true,
-                compactMode: false
-            });
-
-            const [selectedTheme, setSelectedTheme] = useState('Light');
-            const [customTheme, setCustomTheme] = useState({
-                '--bg': '#ffffff', '--card': '#f3f4f6', '--text': '#000000', '--primary': '#10b981', '--border': '#d1d5db'
-            });
-            const [showCustomThemeEditor, setShowCustomThemeEditor] = useState(false);
-            const [toastMessage, setToastMessage] = useState(null);
-
-            const getCurrentThemeVars = () => {
-                if (selectedTheme === 'Custom') return customTheme;
-                const theme = THEMES.find(t => t.name === selectedTheme);
-                return theme ? theme.vars : THEMES[0].vars;
-            };
-
-            useEffect(() => {
-                const root = document.documentElement;
-                const activeVars = getCurrentThemeVars();
-                Object.entries(activeVars).forEach(([key, val]) => {
-                    root.style.setProperty(key, val);
-                });
-            }, [selectedTheme, customTheme]);
-
-            const showToast = (msg) => {
-                setToastMessage(msg);
-                setTimeout(() => setToastMessage(null), 3000);
-            };
-
-            // --- Pattern Recognition Parser ---
-            const parseTextData = (text) => {
-                const lines = text.split('\n');
-                const parsed = [];
-                let idCounter = 1;
-                const uniqueLessons = new Set();
-
-                let separator = '\t';
-                const sepMatch = text.match(/#separator:(.+)/);
-                if (sepMatch) {
-                    if (sepMatch[1].trim() === 'tab') separator = '\t';
-                    else if (sepMatch[1].trim() === 'comma') separator = ',';
-                    else separator = sepMatch[1].trim();
-                }
-
-                let explicitTagCol = -1;
-                const tagColMatch = text.match(/#tags column:(\d+)/i);
-                if (tagColMatch) explicitTagCol = parseInt(tagColMatch[1], 10) - 1;
-
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
-                    if (!line.trim() || line.startsWith('#')) continue;
-                    
-                    const cols = line.split(separator);
-                    if (cols.length < 2) continue;
-
-                    let lesson = "General";
-                    let qText = cols[0].trim();
-                    let optStartIndex = 1;
-
-                    // PATTERN RECOGNITION: Check if first column is actually a lesson/chapter name
-                    // Based on "MA MCQ Infections 1064", "Page 119-135", "MCQ...", "Tropical...", or "::"
-                    const col0 = cols[0].trim();
-                    if (cols.length >= 3 && (
-                        col0.includes('::') || 
-                        /page\s*\d+/i.test(col0) || 
-                        /mcq/i.test(col0) || 
-                        /tropical/i.test(col0) ||
-                        /infections/i.test(col0)
-                    )) {
-                        lesson = col0;
-                        qText = cols[1] ? cols[1].trim() : "Unknown Question";
-                        optStartIndex = 2; // Shift options start since col 0 is lesson and col 1 is question
-                    }
-
-                    uniqueLessons.add(lesson);
-
-                    let options = [];
-                    let answerKey = '';
-                    let answerText = '';
-                    let explanation = '';
-                    let tag = '';
-
-                    if (explicitTagCol !== -1 && cols.length > explicitTagCol && cols[explicitTagCol].trim()) {
-                        tag = cols[explicitTagCol].trim();
-                        cols[explicitTagCol] = '';
-                    }
-
-                    // Find answer index heuristically (A, B, C, D, E)
-                    let ansIndex = -1;
-                    for (let c = optStartIndex; c < cols.length; c++) {
-                        const val = cols[c].trim().toUpperCase();
-                        if (/^[A-E]$/.test(val)) {
-                            ansIndex = c;
-                            break;
-                        }
-                    }
-
-                    if (ansIndex !== -1) {
-                        for(let c = optStartIndex; c < ansIndex; c++) {
-                            if (cols[c].trim()) options.push(cols[c].trim());
-                        }
-                        
-                        answerKey = cols[ansIndex].trim();
-                        answerText = cols[ansIndex + 1] ? cols[ansIndex + 1].trim() : '';
-                        let remaining = cols.slice(ansIndex + 2).map(c => c.trim());
-                        
-                        if (!tag) {
-                            let lastNonEmptyIdx = -1;
-                            for (let k = remaining.length - 1; k >= 0; k--) {
-                                if (remaining[k]) {
-                                    lastNonEmptyIdx = k;
-                                    break;
-                                }
-                            }
-                            if (lastNonEmptyIdx !== -1) {
-                                tag = remaining[lastNonEmptyIdx];
-                                remaining[lastNonEmptyIdx] = ''; 
-                            }
-                        }
-
-                        let explParts = remaining.filter(c => c);
-                        if (explParts.length > 0) explanation = explParts.join(" | ");
-                    } else {
-                        // Fallback
-                        options = cols.slice(optStartIndex, cols.length - 2).filter(c => c.trim());
-                        answerText = cols[cols.length - 2] ? cols[cols.length - 2].trim() : '';
-                        if (!tag) {
-                            tag = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
-                        } else {
-                            explanation = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
-                        }
-                    }
-
-                    parsed.push({
-                        id: idCounter++,
-                        lesson: lesson,
-                        question: qText,
-                        options: options,
-                        answerKey: answerKey,
-                        answerText: answerText,
-                        explanation: explanation,
-                        tag: tag
-                    });
-                }
-                
-                return { parsed, lessons: Array.from(uniqueLessons) };
-            };
-
-            // --- Auto Fetch File ---
-            useEffect(() => {
-                if (!activeFile) {
-                    setIsLoading(false);
-                    return;
-                }
-
-                setIsLoading(true);
-                setFetchError(null);
-                
-                fetch(activeFile)
-                    .then(response => {
-                        if (!response.ok) throw new Error("HTTP " + response.status);
-                        return response.text();
-                    })
-                    .then(text => {
-                        const { parsed, lessons } = parseTextData(text);
-                        setQuestions(parsed);
-                        setAvailableLessons(lessons);
-                        
-                        // Reset interactions for new file
-                        setFavoriteIds(new Set());
-                        setCompletedIds(new Set());
-                        setCollapsedIds(new Set());
-                        setSelectedLessons(new Set());
-                        setSearchQuery("");
-                        
-                        setIsLoading(false);
-                        showToast(`Loaded ${parsed.length} questions from ${activeFile}`);
-                    })
-                    .catch(error => {
-                        console.error("Fetch Error:", error);
-                        setFetchError(`Cannot load "${activeFile}". Are you running a local web server? Browsers block direct local file access.`);
-                        setIsLoading(false);
-                    });
-            }, [activeFile]);
-
-            // --- Toggle Interactions ---
-            const toggleFavorite = (id) => {
-                setFavoriteIds(prev => {
-                    const next = new Set(prev);
-                    next.has(id) ? next.delete(id) : next.add(id);
-                    return next;
-                });
-            };
-
-            const toggleCompleted = (id) => {
-                setCompletedIds(prev => {
-                    const next = new Set(prev);
-                    next.has(id) ? next.delete(id) : next.add(id);
-                    return next;
-                });
-            };
-
-            const toggleCollapse = (id) => {
-                setCollapsedIds(prev => {
-                    const next = new Set(prev);
-                    next.has(id) ? next.delete(id) : next.add(id);
-                    return next;
-                });
-            };
-
-            const toggleCollapseAll = () => {
-                if (collapsedIds.size > 0) {
-                    setCollapsedIds(new Set()); 
-                } else {
-                    setCollapsedIds(new Set(questions.map(q => q.id))); 
-                }
-            };
-
-            const toggleLessonFilter = (lesson) => {
-                setSelectedLessons(prev => {
-                    const next = new Set(prev);
-                    next.has(lesson) ? next.delete(lesson) : next.add(lesson);
-                    return next;
-                });
-            };
-
-            // --- Search & Filter Logic ---
-            const visibleQuestions = useMemo(() => {
-                let filtered = questions;
-
-                // 1. Filter by Lesson
-                if (selectedLessons.size > 0) {
-                    filtered = filtered.filter(q => selectedLessons.has(q.lesson));
-                }
-
-                // 2. Filter by Search Query
-                if (searchQuery.trim()) {
-                    const query = searchQuery.trim();
-                    const rangeMatch = query.match(/^(\d+)\s*-\s*(\d+)$/);
-                    const idsMatch = query.match(/^(\d+\s*,\s*)*\d+$/);
-
-                    if (rangeMatch) {
-                        const start = parseInt(rangeMatch[1]);
-                        const end = parseInt(rangeMatch[2]);
-                        filtered = filtered.filter(q => q.id >= start && q.id <= end);
-                    } else if (idsMatch) {
-                        const ids = query.split(',').map(id => parseInt(id.trim()));
-                        filtered = filtered.filter(q => ids.includes(q.id));
-                    } else {
-                        const lowerQ = query.toLowerCase();
-                        filtered = filtered.filter(q => 
-                            q.question.toLowerCase().includes(lowerQ) ||
-                            q.options.some(opt => opt.toLowerCase().includes(lowerQ)) ||
-                            q.explanation.toLowerCase().includes(lowerQ) ||
-                            q.tag.toLowerCase().includes(lowerQ) ||
-                            (q.answerText && q.answerText.toLowerCase().includes(lowerQ))
-                        );
-                    }
-                }
-
-                // 3. Filter by Active Tab
-                if (activeTab === 'Favorites') {
-                    filtered = filtered.filter(q => favoriteIds.has(q.id));
-                } else if (activeTab === 'Completed') {
-                    filtered = filtered.filter(q => completedIds.has(q.id));
-                }
-
-                return filtered;
-            }, [questions, searchQuery, activeTab, favoriteIds, completedIds, selectedLessons]);
-
-
-            // --- Export Functions ---
-            const copyToClipboard = () => {
-                if(visibleQuestions.length === 0) return showToast("No questions to copy");
-                let text = `QnA Export - ${activeFile}\n\n`;
-                visibleQuestions.forEach(q => {
-                    text += `[ID: ${q.id} | ${q.lesson}]\n${q.question}\n`;
-                    if (displaySettings.showOptions && q.options.length > 0) {
-                        q.options.forEach((opt, i) => { text += `  ${String.fromCharCode(65 + i)}) ${opt}\n`; });
-                    }
-                    if (displaySettings.showAnswer) text += `  Answer: ${q.answerKey ? q.answerKey + ' - ' : ''}${q.answerText}\n`;
-                    if (displaySettings.showExplanation && q.explanation) text += `  Explanation: ${q.explanation}\n`;
-                    if (displaySettings.showTags && q.tag) text += `  Tags: ${q.tag}\n`;
-                    text += `\n---------------------------------------\n\n`;
-                });
-                
-                const el = document.createElement('textarea');
-                el.value = text;
-                document.body.appendChild(el);
-                el.select();
-                try { document.execCommand('copy'); showToast("Copied to clipboard!"); } 
-                catch (err) { alert("Failed to copy text."); }
-                document.body.removeChild(el);
-            };
-
-            const exportToPDF = () => {
-                if(visibleQuestions.length === 0) return showToast("No questions to export");
-                setIsExporting(true);
-                showToast("Generating PDF... Please wait.");
-                
-                const element = document.getElementById('questions-container');
-                const vars = getCurrentThemeVars();
-                
-                const opt = {
-                    margin:       displaySettings.compactMode ? 0.2 : 0.5,
-                    filename:     `QnA_${activeTab}.pdf`,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, backgroundColor: vars['--bg'], windowWidth: 1024 },
-                    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
-                    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-                };
-                
-                html2pdf().set(opt).from(element).save().then(() => {
-                    setIsExporting(false);
-                    showToast("PDF Downloaded successfully!");
-                }).catch(err => {
-                    setIsExporting(false);
-                    showToast("PDF Export Failed.");
-                });
-            };
-
-            const exportToDocx = () => {
-                if(visibleQuestions.length === 0) return showToast("No questions to export");
-                
-                const vars = getCurrentThemeVars();
-                const bg = vars['--bg'];
-                const cardBg = vars['--card'];
-                const text = vars['--text'];
-                const primary = vars['--primary'];
-                const border = vars['--border'];
-
-                const isCompact = displaySettings.compactMode;
-                const containerPadding = isCompact ? "10px" : "20px";
-                const tableMargin = isCompact ? "10px" : "30px";
-                const cellPadding = isCompact ? "10" : "20";
-                const itemMargin = isCompact ? "5px 0" : "15px 0";
-
-                let html = `
-                <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: ${bg}; padding: ${containerPadding};">
-                    <h2 style="color: ${text}; text-align: center; margin-bottom: 20px; font-size: ${isCompact ? '18px' : '24px'}">QnA Hub Export</h2>
-                `;
-
-                visibleQuestions.forEach(q => {
-                    html += `
-                    <table width="100%" cellpadding="${cellPadding}" cellspacing="0" style="margin-bottom: ${tableMargin}; border: 1px solid ${border}; background-color: ${cardBg}; border-collapse: collapse;">
-                        <tr>
-                            <td style="color: ${text};">
-                                <div style="font-size: ${isCompact ? '14px' : '16px'}; font-weight: bold; margin-bottom: ${isCompact ? '8px' : '15px'};">
-                                    <span style="background-color: ${primary}; color: #ffffff; padding: 2px 6px; font-size: 11px; margin-right: 8px; border-radius: 4px;">ID: ${q.id}</span>
-                                    <span style="background-color: #e5e7eb; color: #374151; padding: 2px 6px; font-size: 11px; margin-right: 8px; border-radius: 4px;">${q.lesson.replace(/</g, '&lt;')}</span><br/><br/>
-                                    ${q.question.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-                                </div>
-                    `;
-
-                    if (!collapsedIds.has(q.id)) {
-                        if (displaySettings.showOptions && q.options.length > 0) {
-                            html += `<div style="margin: ${itemMargin};">`;
-                            q.options.forEach((opt, i) => {
-                                const char = String.fromCharCode(65 + i);
-                                const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
-                                let optStyle = `padding: 8px; margin-bottom: 4px; border: 1px solid ${border}; background-color: ${bg}; color: ${text}; font-size: ${isCompact ? '13px' : '14px'}`;
-                                if (displaySettings.showAnswer && isCorrect) optStyle = `padding: 8px; margin-bottom: 4px; border: 1px solid #22c55e; background-color: #dcfce7; color: #166534; font-weight: bold; font-size: ${isCompact ? '13px' : '14px'}`;
-                                html += `<div style="${optStyle}"><strong>${char}.</strong> ${opt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
-                            });
-                            html += `</div>`;
-                        }
-
-                        if (displaySettings.showAnswer && q.answerText && (!displaySettings.showOptions || q.options.length === 0)) {
-                            html += `<div style="margin: ${itemMargin}; padding: 8px; background-color: #dcfce7; border: 1px solid #22c55e; color: #166534; font-size: ${isCompact ? '13px' : '14px'}"><strong>Answer:</strong> ${q.answerKey ? q.answerKey + ' - ' : ''}${q.answerText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
-                        }
-                        if (displaySettings.showExplanation && q.explanation) {
-                            html += `<div style="margin: ${itemMargin}; padding: 8px; background-color: ${bg}; border-left: 4px solid ${primary};"><strong style="font-size: 11px; text-transform: uppercase; color: ${text};">Explanation</strong><p style="margin: 3px 0 0 0; color: ${text}; font-size: ${isCompact ? '13px' : '14px'}">${q.explanation.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p></div>`;
-                        }
-                    }
-
-                    html += `</td></tr></table>`;
-                });
-                
-                html += `</div>`;
-
-                const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Questions Export</title></head><body>";
-                const fullHTML = header + html + "</body></html>";
-                
-                const blob = new Blob(['\ufeff', fullHTML], { type: 'application/msword' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `QnA_${activeTab}.doc`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                showToast("Exported to fully styled Docx!");
-            };
-
-            const progressPercentage = questions.length > 0 ? Math.round((completedIds.size / questions.length) * 100) : 0;
-
-            return (
-                <div className="min-h-screen pb-12">
-                    {/* Header */}
-                    <header className="bg-themeCard border-b border-themeBorder sticky top-0 z-40 shadow-sm">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 bg-themePrimary text-white rounded-lg">
-                                    <Icons.FileText />
-                                </div>
-                                <h1 className="text-xl font-bold text-themeText hidden sm:block">QnA Hub</h1>
-                            </div>
-                            
-                            <div className="flex items-center gap-4 relative">
-                                
-                                {/* FILE SELECTOR (Shows only if multiple files are in CONFIG) */}
-                                {AVAILABLE_FILES.length > 1 && (
-                                    <select 
-                                        className="bg-themeBg text-themeText border border-themeBorder rounded-md px-3 py-1.5 focus:outline-none focus:border-themePrimary max-w-[200px] truncate"
-                                        value={activeFile}
-                                        onChange={(e) => setActiveFile(e.target.value)}
-                                    >
-                                        {AVAILABLE_FILES.map(f => <option key={f} value={f}>{f}</option>)}
-                                    </select>
-                                )}
-
-                                <div className="flex items-center gap-2">
-                                    <Icons.Palette />
-                                    <select 
-                                        className="bg-themeBg text-themeText border border-themeBorder rounded-md px-3 py-1.5 focus:outline-none focus:border-themePrimary"
-                                        value={selectedTheme}
-                                        onChange={(e) => {
-                                            setSelectedTheme(e.target.value);
-                                            setShowCustomThemeEditor(e.target.value === 'Custom');
-                                        }}
-                                    >
-                                        {THEMES.map(t => (
-                                            <option key={t.name} value={t.name}>{t.name}</option>
-                                        ))}
-                                        <option value="Custom">Custom...</option>
-                                    </select>
-                                </div>
-                                
-                                {showCustomThemeEditor && selectedTheme === 'Custom' && (
-                                    <div className="absolute top-12 right-0 w-64 p-4 bg-themeCard border border-themeBorder shadow-lg rounded-xl z-50 animate-fade-in">
-                                        <h4 className="text-sm font-semibold mb-3 border-b border-themeBorder pb-2">Custom Theme</h4>
-                                        {[
-                                            { label: 'Background', key: '--bg' },
-                                            { label: 'Card Base', key: '--card' },
-                                            { label: 'Text Color', key: '--text' },
-                                            { label: 'Primary', key: '--primary' },
-                                            { label: 'Border', key: '--border' }
-                                        ].map(color => (
-                                            <div key={color.key} className="flex justify-between items-center mb-2">
-                                                <label className="text-xs">{color.label}</label>
-                                                <input 
-                                                    type="color" 
-                                                    value={customTheme[color.key]}
-                                                    onChange={(e) => setCustomTheme(prev => ({ ...prev, [color.key]: e.target.value }))}
-                                                    className="w-8 h-8 rounded cursor-pointer border-0 p-0"
-                                                />
-                                            </div>
-                                        ))}
-                                        <button 
-                                            onClick={() => setShowCustomThemeEditor(false)}
-                                            className="w-full mt-2 text-xs bg-themePrimary text-white py-1 rounded"
-                                        >
-                                            Done
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </header>
-
-                    {/* Navigation Tabs & Progress */}
-                    {!isLoading && questions.length > 0 && (
-                        <div className="bg-themeCard border-b border-themeBorder shadow-sm relative z-30">
-                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 py-3">
-                                
-                                <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
-                                    {['All', 'Favorites', 'Completed'].map(tab => {
-                                        let count = questions.length;
-                                        if(tab === 'Favorites') count = favoriteIds.size;
-                                        if(tab === 'Completed') count = completedIds.size;
-                                        return (
-                                            <button
-                                                key={tab}
-                                                onClick={() => setActiveTab(tab)}
-                                                className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors flex items-center gap-2
-                                                    ${activeTab === tab ? 'bg-themePrimary text-white' : 'hover:bg-themeBg opacity-70 hover:opacity-100'}`}
-                                            >
-                                                {tab === 'Favorites' && <Icons.Star filled={activeTab === 'Favorites'} />}
-                                                {tab === 'Completed' && <Icons.CheckCircle />}
-                                                {tab === 'All' && <Icons.List />}
-                                                {tab} ({count})
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                                
-                                <div className="flex items-center gap-3 w-full sm:w-64">
-                                    <span className="text-sm font-bold opacity-70 whitespace-nowrap">Progress: {progressPercentage}%</span>
-                                    <div className="flex-1 h-2.5 bg-themeBg rounded-full overflow-hidden border border-themeBorder">
-                                        <div 
-                                            className="h-full bg-green-500 transition-all duration-500 ease-out"
-                                            style={{ width: `${progressPercentage}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Toolbar */}
-                    {!isLoading && questions.length > 0 && (
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-                            <div className="bg-themeCard border border-themeBorder rounded-xl p-4 sm:p-6 shadow-sm flex flex-col gap-6">
-                                
-                                {/* Filters & Search */}
-                                <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
-                                    
-                                    {/* Lesson Filter Dropdown */}
-                                    <div className="relative w-full lg:w-1/3 z-20">
-                                        <button 
-                                            onClick={() => setIsLessonDropdownOpen(!isLessonDropdownOpen)}
-                                            className="w-full flex justify-between items-center px-4 py-2 border border-themeBorder rounded-lg bg-themeBg text-themeText hover:border-themePrimary transition-colors"
-                                        >
-                                            <span className="flex items-center gap-2 truncate">
-                                                <Icons.Filter />
-                                                {selectedLessons.size === 0 
-                                                    ? "Filter by Lesson (All)" 
-                                                    : `${selectedLessons.size} Lesson(s) Selected`}
-                                            </span>
-                                            {isLessonDropdownOpen ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
-                                        </button>
-                                        
-                                        {isLessonDropdownOpen && (
-                                            <div className="absolute top-full left-0 mt-2 w-full bg-themeCard border border-themeBorder rounded-lg shadow-xl dropdown-scroll py-2">
-                                                {availableLessons.map(lesson => (
-                                                    <label key={lesson} className="flex items-center gap-3 px-4 py-2 hover:bg-themeBg cursor-pointer">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={selectedLessons.has(lesson)}
-                                                            onChange={() => toggleLessonFilter(lesson)}
-                                                            className="w-4 h-4 rounded text-themePrimary focus:ring-themePrimary"
-                                                        />
-                                                        <span className="text-sm truncate" title={lesson}>{lesson}</span>
-                                                    </label>
-                                                ))}
-                                                {availableLessons.length === 0 && (
-                                                    <div className="px-4 py-2 text-sm opacity-50">No lessons detected in file.</div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Search Bar */}
-                                    <div className="relative w-full lg:flex-1">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-themeText opacity-50">
-                                            <Icons.Search />
-                                        </div>
-                                        <input 
-                                            type="text" 
-                                            className="block w-full pl-10 pr-3 py-2 border border-themeBorder rounded-lg bg-themeBg text-themeText placeholder-themeText placeholder-opacity-50 focus:outline-none focus:ring-2 focus:ring-themePrimary"
-                                            placeholder="Search text, ID (ex: 5, 10), or range (ex: 1-10)..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                        />
-                                    </div>
-
-                                    {/* Export Buttons */}
-                                    <div className="flex gap-2 w-full lg:w-auto">
-                                        <button onClick={copyToClipboard} title="Copy as Text" className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-themeBorder rounded-lg bg-themeCard hover:bg-themeBg transition-colors">
-                                            <Icons.Copy /> <span className="sr-only sm:not-sr-only text-sm">Copy</span>
-                                        </button>
-                                        <button onClick={exportToPDF} disabled={isExporting} title="Export to PDF" className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-themeBorder rounded-lg bg-themeCard hover:bg-themeBg transition-colors disabled:opacity-50">
-                                            {isExporting ? <Icons.Loader /> : <Icons.FileText />} <span className="sr-only sm:not-sr-only text-sm">PDF</span>
-                                        </button>
-                                        <button onClick={exportToDocx} title="Export to Docx" className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-themeBorder rounded-lg bg-themeCard hover:bg-themeBg transition-colors">
-                                            <Icons.Download /> <span className="sr-only sm:not-sr-only text-sm">Docx</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="h-px bg-themeBorder w-full"></div>
-
-                                {/* Display Settings */}
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <span className="text-sm font-semibold opacity-70 mr-2">Display:</span>
-                                    {[
-                                        { key: 'showOptions', label: 'Options', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
-                                        { key: 'showAnswer', label: 'Answers', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
-                                        { key: 'showExplanation', label: 'Explanations', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
-                                        { key: 'showTags', label: 'Tags', iconOn: <Icons.Eye/>, iconOff: <Icons.EyeOff/> },
-                                        { key: 'compactMode', label: 'Compact', iconOn: <Icons.Minimize/>, iconOff: <Icons.Minimize/> }
-                                    ].map(setting => (
-                                        <button
-                                            key={setting.key}
-                                            onClick={() => setDisplaySettings(prev => ({...prev, [setting.key]: !prev[setting.key]}))}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm transition-all
-                                                ${setting.key === 'compactMode' && displaySettings.compactMode ? 'bg-indigo-500 text-white border-indigo-500' : ''}
-                                                ${setting.key !== 'compactMode' && displaySettings[setting.key] ? 'bg-themePrimary text-white border-themePrimary' : ''}
-                                                ${!displaySettings[setting.key] ? 'bg-themeBg text-themeText border-themeBorder hover:bg-themeBorder opacity-70' : ''}`}
-                                        >
-                                            {displaySettings[setting.key] ? setting.iconOn : setting.iconOff}
-                                            <span className="hidden sm:inline">{setting.label}</span>
-                                        </button>
-                                    ))}
-                                    
-                                    <div className="ml-auto flex items-center gap-2">
-                                        <button 
-                                            onClick={toggleCollapseAll}
-                                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-themeBorder bg-themeBg text-sm hover:bg-themeCard transition-colors"
-                                        >
-                                            {collapsedIds.size > 0 ? <Icons.ChevronDown /> : <Icons.ChevronUp />}
-                                            {collapsedIds.size > 0 ? "Expand All" : "Collapse All"}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Main Content Area */}
-                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-                        
-                        {/* Error / Loading States */}
-                        {isLoading && (
-                            <div className="flex flex-col items-center justify-center py-20 opacity-70">
-                                <Icons.Loader />
-                                <p className="mt-4 font-bold">Loading File...</p>
-                            </div>
-                        )}
-
-                        {fetchError && !isLoading && (
-                            <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
-                                <Icons.Alert />
-                                <h2 className="text-xl font-bold mt-4 mb-2 text-red-500">Auto-Load Failed</h2>
-                                <p className="opacity-80 leading-relaxed bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200">
-                                    {fetchError}
-                                </p>
-                            </div>
-                        )}
-
-                        {!isLoading && !fetchError && questions.length > 0 && (
-                            <div id="questions-container" className="pb-8">
-                                {visibleQuestions.map((q) => {
-                                    const isCollapsed = collapsedIds.has(q.id);
-                                    const isFavorite = favoriteIds.has(q.id);
-                                    const isCompleted = completedIds.has(q.id);
-                                    
-                                    return (
-                                    <div key={q.id} className={`bg-themeCard border border-themeBorder shadow-sm break-inside-avoid transition-all ${isCompleted ? 'opacity-80' : ''} ${displaySettings.compactMode ? 'mb-2 p-3 sm:p-4 rounded-lg' : 'mb-6 p-5 sm:p-6 rounded-xl'}`}>
-                                        
-                                        <div className={`flex justify-between items-start gap-3 ${displaySettings.compactMode || isCollapsed ? 'mb-0' : 'mb-4'}`}>
-                                            
-                                            <div className="flex items-start gap-3 flex-1">
-                                                <button 
-                                                    onClick={() => toggleCompleted(q.id)}
-                                                    className="mt-0.5 shrink-0 focus:outline-none"
-                                                    title={isCompleted ? "Mark as unread" : "Mark as done"}
-                                                >
-                                                    {isCompleted ? <Icons.CheckCircle /> : <Icons.Circle />}
-                                                </button>
-                                                <div className="flex-1">
-                                                    {/* Lesson Badge displayed right above question text */}
-                                                    {q.lesson && q.lesson !== "General" && (
-                                                        <div className="inline-block px-2 py-0.5 bg-themeBg border border-themeBorder rounded text-[10px] font-bold uppercase opacity-70 mb-2 truncate max-w-full" title={q.lesson}>
-                                                            {q.lesson}
-                                                        </div>
-                                                    )}
-                                                    <h3 className={`font-bold leading-relaxed cursor-pointer ${displaySettings.compactMode ? 'text-base' : 'text-lg'} ${isCompleted ? 'line-through opacity-70' : ''}`} onClick={() => toggleCollapse(q.id)}>
-                                                        {q.question}
-                                                    </h3>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                                                <button onClick={() => toggleFavorite(q.id)} className="p-1 focus:outline-none" title="Toggle Favorite">
-                                                    <Icons.Star filled={isFavorite} />
-                                                </button>
-                                                <button onClick={() => toggleCollapse(q.id)} className="p-1 opacity-50 hover:opacity-100 focus:outline-none" title="Expand/Collapse">
-                                                    {isCollapsed ? <Icons.ChevronDown /> : <Icons.ChevronUp />}
-                                                </button>
-                                                <div className={`bg-themePrimary text-white font-bold rounded-full shadow-sm ml-1 sm:ml-2 ${displaySettings.compactMode ? 'text-[10px] px-2 py-0.5' : 'text-xs px-3 py-1'}`}>
-                                                    ID: {q.id}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {!isCollapsed && (
-                                            <div className="mt-4 animate-fade-in border-t border-themeBorder pt-4">
-                                                {displaySettings.showOptions && q.options && q.options.length > 0 && (
-                                                    <div className={`${displaySettings.compactMode ? 'space-y-1 mb-2' : 'space-y-2 mb-4'}`}>
-                                                        {q.options.map((opt, i) => {
-                                                            const char = String.fromCharCode(65 + i);
-                                                            const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
-                                                            const highlightClass = (displaySettings.showAnswer && isCorrect) 
-                                                                ? 'bg-green-100 dark:bg-green-900 border-green-500 text-green-900 dark:text-green-100 font-medium' 
-                                                                : 'bg-themeBg border-themeBorder';
-
-                                                            return (
-                                                                <div key={i} className={`flex items-start gap-3 border rounded-lg ${highlightClass} ${displaySettings.compactMode ? 'p-1.5 text-sm' : 'p-3'}`}>
-                                                                    <span className="font-bold min-w-[20px] opacity-70">{char}.</span>
-                                                                    <span className="flex-1 leading-relaxed">{opt}</span>
-                                                                    {displaySettings.showAnswer && isCorrect && (
-                                                                        <span className="text-green-600 dark:text-green-400 shrink-0"><Icons.Check /></span>
-                                                                    )}
-                                                                </div>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                )}
-
-                                                {displaySettings.showAnswer && q.answerText && (!displaySettings.showOptions || q.options.length === 0) && (
-                                                    <div className={`bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-900 dark:text-green-100 flex items-start gap-2 ${displaySettings.compactMode ? 'mb-2 p-2 text-sm' : 'mb-4 p-3'}`}>
-                                                        <div className="shrink-0"><Icons.Check /></div>
-                                                        <div>
-                                                            <span className="font-bold mr-2">Answer:</span> 
-                                                            {q.answerKey ? `${q.answerKey} - ` : ''} {q.answerText}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {displaySettings.showExplanation && q.explanation && (
-                                                    <div className={`bg-themeBg border-l-4 border-themePrimary rounded-r-lg ${displaySettings.compactMode ? 'mb-2 p-2 text-xs' : 'mb-4 p-4 text-sm'}`}>
-                                                        <span className={`font-bold uppercase opacity-70 tracking-wider block ${displaySettings.compactMode ? 'mb-0.5 text-[10px]' : 'mb-1 text-sm'}`}>Explanation</span>
-                                                        <p className="leading-relaxed opacity-90">{q.explanation}</p>
-                                                    </div>
-                                                )}
-
-                                                {displaySettings.showTags && q.tag && (
-                                                    <div className={`flex flex-wrap gap-2 ${displaySettings.compactMode ? 'mt-2' : 'mt-4'}`}>
-                                                        <span className={`inline-flex items-center gap-1.5 font-bold bg-slate-200 text-slate-800 border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 shadow-sm rounded-md ${displaySettings.compactMode ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}`}>
-                                                            <Icons.Tag />
-                                                            {q.tag}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )})}
-
-                                {visibleQuestions.length === 0 && (
-                                    <div className="text-center py-12 opacity-60 border-2 border-dashed border-themeBorder rounded-xl">
-                                        <p className="text-lg">No questions found in this view.</p>
-                                        <p className="text-sm mt-2">Try adjusting your filters, search, or switching tabs.</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </main>
-
-                    {/* Toast Notification */}
-                    {toastMessage && (
-                        <div className="fixed bottom-6 right-6 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg font-medium animate-fade-in flex items-center gap-2">
-                            <Icons.Check />
-                            {toastMessage}
-                        </div>
-                    )}
-
-                </div>
-            );
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
+
+// ==================== CONFIG ====================
+const AVAILABLE_FILES = [
+  " Infections.txt"
+  // Add more files here
+];
+const STORAGE_KEY_PREFIX = "qna_hub_v3_";
+const VIRTUALIZE_THRESHOLD = 80; // virtualize when > N visible items
+
+// ==================== UTILS ====================
+const esc = (s) => String(s).replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+function highlight(text, query) {
+  if (!query || !text) return text;
+  const safe = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  try {
+    const re = new RegExp(`(${safe})`, 'gi');
+    const parts = text.split(re);
+    return parts.map((p, i) => re.test(p) ? <mark key={i}>{p}</mark> : p);
+  } catch { return text; }
+}
+
+function saveLocal(key, data) {
+  try { localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(data)); } catch {}
+}
+function loadLocal(key, fallback) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PREFIX + key);
+    return raw != null ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+
+// ==================== ICONS ====================
+const I = {
+  Search: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>,
+  Upload: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>,
+  Copy: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
+  File: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+  Download: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  Eye: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  EyeOff: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
+  Star: ({filled}) => <svg width="16" height="16" viewBox="0 0 24 24" fill={filled?"currentColor":"none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{color: filled ? "var(--yellow)" : "var(--muted)"}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  Check: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  CheckCircle: ({size=16}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"var(--green)"}}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01" stroke="white" strokeWidth="2.5"/></svg>,
+  Circle: ({size=16}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"var(--muted)"}}><circle cx="12" cy="12" r="10"/></svg>,
+  Loader: () => <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>,
+  Filter: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  Tag: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+  ChevronDown: ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>,
+  ChevronUp: ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>,
+  X: ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  List: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>,
+  BarChart: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>,
+  Brain: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2a2.5 2.5 0 015 0v.5a2.5 2.5 0 01-5 0V2zM12 4.5v15m-4.5-9.5a2.5 2.5 0 00-2.5 2.5v.5a2.5 2.5 0 002.5 2.5M7.5 10a4.5 4.5 0 00-4.5 4.5M16.5 10a2.5 2.5 0 012.5 2.5v.5a2.5 2.5 0 01-2.5 2.5M16.5 10a4.5 4.5 0 014.5 4.5"/></svg>,
+  Question: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  Note: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  Shuffle: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>,
+  Settings: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
+  Moon: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>,
+  Sun: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  Warning: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+};
+
+// ==================== PARSER ====================
+function parseTextData(text) {
+  const lines = text.split('\n');
+  const parsed = [];
+  let idCounter = 1;
+  const uniqueLessons = new Set();
+
+  let separator = '\t';
+  const sepMatch = text.match(/#separator:(.+)/);
+  if (sepMatch) {
+    const s = sepMatch[1].trim();
+    separator = s === 'tab' ? '\t' : s === 'comma' ? ',' : s;
+  }
+
+  let explicitTagCol = -1;
+  const tagColMatch = text.match(/#tags column:(\d+)/i);
+  if (tagColMatch) explicitTagCol = parseInt(tagColMatch[1], 10) - 1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim() || line.startsWith('#')) continue;
+
+    const cols = line.split(separator);
+    if (cols.length < 2) continue;
+
+    let lesson = "General";
+    let qText = cols[0].trim();
+    let optStartIndex = 1;
+
+    const col0 = cols[0].trim();
+    if (cols.length >= 3 && (
+      col0.includes('::') ||
+      /page\s*\d+/i.test(col0) ||
+      /mcq/i.test(col0) ||
+      /tropical/i.test(col0) ||
+      /infections/i.test(col0)
+    )) {
+      lesson = col0;
+      qText = cols[1] ? cols[1].trim() : "Unknown";
+      optStartIndex = 2;
+    }
+
+    uniqueLessons.add(lesson);
+
+    let options = [], answerKey = '', answerText = '', explanation = '', tag = '';
+
+    if (explicitTagCol !== -1 && cols.length > explicitTagCol && cols[explicitTagCol].trim()) {
+      tag = cols[explicitTagCol].trim();
+      cols[explicitTagCol] = '';
+    }
+
+    let ansIndex = -1;
+    for (let c = optStartIndex; c < cols.length; c++) {
+      const val = cols[c].trim().toUpperCase();
+      if (/^[A-E]$/.test(val)) { ansIndex = c; break; }
+    }
+
+    if (ansIndex !== -1) {
+      for (let c = optStartIndex; c < ansIndex; c++) {
+        if (cols[c].trim()) options.push(cols[c].trim());
+      }
+      answerKey = cols[ansIndex].trim();
+      answerText = cols[ansIndex + 1] ? cols[ansIndex + 1].trim() : '';
+      let remaining = cols.slice(ansIndex + 2).map(c => c.trim());
+
+      if (!tag) {
+        let lastIdx = -1;
+        for (let k = remaining.length - 1; k >= 0; k--) {
+          if (remaining[k]) { lastIdx = k; break; }
         }
+        if (lastIdx !== -1) { tag = remaining[lastIdx]; remaining[lastIdx] = ''; }
+      }
+      const explParts = remaining.filter(c => c);
+      if (explParts.length > 0) explanation = explParts.join(" | ");
+    } else {
+      options = cols.slice(optStartIndex, cols.length - 2).filter(c => c.trim());
+      answerText = cols[cols.length - 2] ? cols[cols.length - 2].trim() : '';
+      if (!tag) tag = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
+      else explanation = cols[cols.length - 1] ? cols[cols.length - 1].trim() : '';
+    }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    if (!qText) continue;
+
+    parsed.push({ id: idCounter++, lesson, question: qText, options, answerKey, answerText, explanation, tag });
+  }
+
+  return { parsed, lessons: Array.from(uniqueLessons) };
+}
+
+// ==================== VIRTUAL LIST ====================
+function VirtualList({ items, renderItem, itemHeight = 200, overscan = 5, containerStyle = {} }) {
+  const containerRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setContainerHeight(el.clientHeight || 600);
+
+    const handleScroll = () => setScrollTop(el.scrollTop);
+    const handleResize = () => setContainerHeight(el.clientHeight);
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize);
+    return () => { el.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', handleResize); };
+  }, []);
+
+  const totalHeight = items.length * itemHeight;
+  const startIdx = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
+  const endIdx = Math.min(items.length - 1, Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan);
+
+  const visibleItems = [];
+  for (let i = startIdx; i <= endIdx; i++) {
+    visibleItems.push(
+      <div key={items[i].id} style={{ position: 'absolute', top: i * itemHeight, left: 0, right: 0, minHeight: itemHeight }}>
+        {renderItem(items[i], i)}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} style={{ overflowY: 'auto', height: '100%', ...containerStyle }}>
+      <div style={{ position: 'relative', height: totalHeight }}>
+        {visibleItems}
+      </div>
+    </div>
+  );
+}
+
+// ==================== QUESTION CARD ====================
+const QuestionCard = memo(function QuestionCard({
+  q, isCollapsed, isFavorite, isCompleted, isUnsolved,
+  displaySettings, searchQuery,
+  onToggleCollapse, onToggleFavorite, onToggleCompleted,
+  onOpenNote, noteText, compact,
+}) {
+  // Per-card answer visibility: null = follow global, true = force show, false = force hide
+  const [localAnswer, setLocalAnswer] = useState(null);
+  const showAnswerEffective = localAnswer !== null ? localAnswer : displaySettings.showAnswer;
+
+  const hl = (text) => highlight(text, searchQuery);
+
+  return (
+    <div
+      className={`q-card animate-fade-in ${isCompleted ? 'completed' : ''} ${isUnsolved && !isCompleted ? 'unsolved' : ''}`}
+      style={{ marginBottom: compact ? 8 : 14 }}
+    >
+      {/* Card Header */}
+      <div
+        style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          gap: 12, padding: compact ? '12px 14px' : '16px 18px',
+          cursor: 'pointer',
+        }}
+        onClick={() => onToggleCollapse(q.id)}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1 }}>
+          {/* Complete toggle */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleCompleted(q.id); }}
+            style={{ marginTop: 2, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 0 }}
+            title={isCompleted ? "Mark unread" : "Mark done"}
+          >
+            {isCompleted ? <I.CheckCircle size={18}/> : <I.Circle size={18}/>}
+          </button>
+
+          <div style={{ flex: 1 }}>
+            {/* Lesson badge */}
+            {q.lesson && q.lesson !== "General" && (
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--muted)', marginBottom: 4 }}>
+                {q.lesson.length > 50 ? q.lesson.slice(0, 50) + '…' : q.lesson}
+              </div>
+            )}
+            <div
+              style={{
+                fontSize: compact ? 13 : 14, fontWeight: 500, lineHeight: 1.55,
+                textDecoration: isCompleted ? 'line-through' : 'none',
+                opacity: isCompleted ? 0.7 : 1,
+              }}
+            >
+              {hl(q.question)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {/* Individual answer toggle */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocalAnswer(prev => {
+                // Cycle: null(global) → show → hide → null(global)
+                if (prev === null) return true;
+                if (prev === true) return false;
+                return null;
+              });
+            }}
+            title={localAnswer === null ? `Answer: following global (${displaySettings.showAnswer ? 'visible' : 'hidden'}) — click to override` : localAnswer ? 'Answer: shown — click to hide' : 'Answer: hidden — click to reset'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
+              transition: 'all 0.15s',
+              background: localAnswer === true
+                ? 'var(--green-glow)'
+                : localAnswer === false
+                  ? 'rgba(240,96,88,0.12)'
+                  : 'var(--card2)',
+              color: localAnswer === true
+                ? 'var(--green)'
+                : localAnswer === false
+                  ? 'var(--red)'
+                  : 'var(--muted)',
+              border: localAnswer === true
+                ? '1px solid var(--green)'
+                : localAnswer === false
+                  ? '1px solid var(--red)'
+                  : '1px solid var(--border2)',
+            }}
+          >
+            {localAnswer === true ? <I.Eye/> : localAnswer === false ? <I.EyeOff/> : <I.Eye/>}
+            <span style={{ display: compact ? 'none' : undefined }}>
+              {localAnswer === true ? 'Ans' : localAnswer === false ? 'Ans' : 'Ans'}
+            </span>
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenNote(q.id); }}
+            style={{ background: noteText ? 'var(--primary-glow)' : 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, color: noteText ? 'var(--primary)' : 'var(--muted)' }}
+            title="Notes"
+          >
+            <I.Note/>
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(q.id); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6 }}
+            title="Favorite"
+          >
+            <I.Star filled={isFavorite}/>
+          </button>
+          <span className="id-badge">{q.id}</span>
+          <div style={{ color: 'var(--muted)', padding: '2px 4px' }}>
+            {isCollapsed ? <I.ChevronDown/> : <I.ChevronUp/>}
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded Body */}
+      {!isCollapsed && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: compact ? '10px 14px 14px' : '14px 18px 18px' }} className="animate-fade-in">
+          {/* Options */}
+          {displaySettings.showOptions && q.options && q.options.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+              {q.options.map((opt, i) => {
+                const char = String.fromCharCode(65 + i);
+                const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
+                return (
+                  <div key={i} className={`opt-row ${showAnswerEffective && isCorrect ? 'correct' : ''}`}
+                    style={{ fontSize: compact ? 12 : 14 }}>
+                    <span style={{ fontWeight: 700, minWidth: 18, fontFamily: 'var(--mono)', fontSize: 12 }}>{char}.</span>
+                    <span style={{ flex: 1, lineHeight: 1.5 }}>{hl(opt)}</span>
+                    {showAnswerEffective && isCorrect && <I.Check/>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Answer text (when no options) */}
+          {showAnswerEffective && q.answerText && (!displaySettings.showOptions || q.options.length === 0) && (
+            <div style={{
+              background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 8,
+              color: 'var(--green)', padding: '8px 12px', fontSize: compact ? 12 : 13,
+              display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10
+            }}>
+              <I.Check/> <span><b>Answer:</b> {q.answerKey ? q.answerKey + ' — ' : ''}{hl(q.answerText)}</span>
+            </div>
+          )}
+
+          {/* Explanation */}
+          {displaySettings.showExplanation && q.explanation && (
+            <div style={{
+              borderLeft: '3px solid var(--primary)', paddingLeft: 12, marginBottom: 10,
+              fontSize: compact ? 11 : 12, color: 'var(--muted)', lineHeight: 1.6
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2, color: 'var(--primary)' }}>Explanation</div>
+              {hl(q.explanation)}
+            </div>
+          )}
+
+          {/* Tag */}
+          {displaySettings.showTags && q.tag && (
+            <span className="tag-chip"><I.Tag/>{q.tag}</span>
+          )}
+
+          {/* Note preview */}
+          {noteText && (
+            <div style={{ marginTop: 8, padding: '6px 10px', background: 'var(--card2)', borderRadius: 6, fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', borderLeft: '2px solid var(--yellow)', cursor: 'pointer' }}
+              onClick={() => onOpenNote(q.id)}>
+              📝 {noteText.length > 80 ? noteText.slice(0, 80) + '…' : noteText}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ==================== PRACTICE MODE ====================
+function PracticeMode({ questions, onClose }) {
+  const [deck, setDeck] = useState(() => [...questions].sort(() => Math.random() - 0.5));
+  const [idx, setIdx] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [score, setScore] = useState({ correct: 0, wrong: 0, skipped: 0 });
+  const [done, setDone] = useState(false);
+
+  const q = deck[idx];
+  const progress = ((idx) / deck.length) * 100;
+
+  const answer = (char) => {
+    if (selected) return;
+    setSelected(char);
+    setShowAnswer(true);
+    const correct = char === q.answerKey?.toUpperCase();
+    setScore(s => ({ ...s, correct: s.correct + (correct ? 1 : 0), wrong: s.wrong + (correct ? 0 : 1) }));
+  };
+
+  const next = () => {
+    if (idx + 1 >= deck.length) { setDone(true); return; }
+    setIdx(i => i + 1);
+    setSelected(null);
+    setShowAnswer(false);
+  };
+
+  const skip = () => {
+    setScore(s => ({ ...s, skipped: s.skipped + 1 }));
+    next();
+  };
+
+  const restart = () => {
+    setDeck([...questions].sort(() => Math.random() - 0.5));
+    setIdx(0); setSelected(null); setShowAnswer(false);
+    setScore({ correct: 0, wrong: 0, skipped: 0 }); setDone(false);
+  };
+
+  if (done) {
+    const total = score.correct + score.wrong + score.skipped;
+    const pct = Math.round((score.correct / total) * 100) || 0;
+    return (
+      <div className="modal-bg">
+        <div className="modal" style={{ textAlign: 'center', maxWidth: 480 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>{pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '💪'}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Session Complete!</div>
+          <div style={{ color: 'var(--muted)', marginBottom: 24 }}>{total} questions answered</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }}>
+            <div className="stat-card" style={{ alignItems: 'center' }}>
+              <div className="stat-num" style={{ color: 'var(--green)' }}>{score.correct}</div>
+              <div className="stat-label">Correct</div>
+            </div>
+            <div className="stat-card" style={{ alignItems: 'center' }}>
+              <div className="stat-num" style={{ color: 'var(--red)' }}>{score.wrong}</div>
+              <div className="stat-label">Wrong</div>
+            </div>
+            <div className="stat-card" style={{ alignItems: 'center' }}>
+              <div className="stat-num" style={{ color: 'var(--muted)' }}>{score.skipped}</div>
+              <div className="stat-label">Skipped</div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 32, fontWeight: 800, color: pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)', marginBottom: 20 }}>
+            {pct}% Score
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+            <button className="btn btn-primary" onClick={restart}>Try Again</button>
+            <button className="btn" onClick={onClose}>Exit</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-bg">
+      <div className="modal">
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Practice Mode <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {idx + 1} / {deck.length}</span></div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>✓ {score.correct}</span>
+            <span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600 }}>✗ {score.wrong}</span>
+            <button className="btn btn-ghost" onClick={onClose} style={{ padding: '4px 8px' }}><I.X size={16}/></button>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div className="progress-bar" style={{ marginBottom: 20 }}>
+          <div className="progress-bar-fill" style={{ width: `${progress}%`, background: 'var(--primary)' }}/>
+        </div>
+
+        {/* Question */}
+        <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.6, marginBottom: 20 }}>
+          {q.question}
+        </div>
+
+        {/* Options */}
+        {q.options && q.options.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            {q.options.map((opt, i) => {
+              const char = String.fromCharCode(65 + i);
+              const isCorrect = q.answerKey && char === q.answerKey.toUpperCase();
+              const isSelected = selected === char;
+              let cls = '';
+              if (showAnswer && isCorrect) cls = 'correct';
+              else if (showAnswer && isSelected && !isCorrect) cls = 'wrong';
+              return (
+                <button key={i} className={`quiz-btn ${cls}`} onClick={() => answer(char)} disabled={!!selected}>
+                  <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, marginRight: 8 }}>{char}.</span>{opt}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div>
+            {!showAnswer ? (
+              <button className="btn btn-primary" onClick={() => { setShowAnswer(true); setSelected('revealed'); }}>Reveal Answer</button>
+            ) : (
+              <div style={{ padding: '12px 16px', background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 8, color: 'var(--green)', marginBottom: 16 }}>
+                <b>Answer:</b> {q.answerKey ? q.answerKey + ' — ' : ''}{q.answerText}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Explanation */}
+        {showAnswer && q.explanation && (
+          <div style={{ borderLeft: '3px solid var(--primary)', paddingLeft: 12, fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--primary)', marginBottom: 2 }}>Explanation</div>
+            {q.explanation}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          {!selected && <button className="btn" onClick={skip}>Skip</button>}
+          {(selected || showAnswer) && <button className="btn btn-primary" onClick={next}>{idx + 1 >= deck.length ? 'Finish' : 'Next →'}</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== REPORT MODAL ====================
+function ReportModal({ questions, favoriteIds, completedIds, notes, onClose }) {
+  const total = questions.length;
+  const completed = completedIds.size;
+  const favorites = favoriteIds.size;
+  const unsolved = total - completed;
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const notedCount = Object.values(notes).filter(n => n && n.trim()).length;
+
+  // Lesson breakdown
+  const lessonMap = {};
+  questions.forEach(q => {
+    if (!lessonMap[q.lesson]) lessonMap[q.lesson] = { total: 0, done: 0 };
+    lessonMap[q.lesson].total++;
+    if (completedIds.has(q.id)) lessonMap[q.lesson].done++;
+  });
+  const lessons = Object.entries(lessonMap).sort((a, b) => b[1].total - a[1].total);
+
+  // Tag breakdown
+  const tagMap = {};
+  questions.forEach(q => {
+    if (q.tag) {
+      if (!tagMap[q.tag]) tagMap[q.tag] = 0;
+      tagMap[q.tag]++;
+    }
+  });
+  const tags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 680 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>📊 Study Report</div>
+          <button className="btn btn-ghost" onClick={onClose}><I.X size={16}/></button>
+        </div>
+
+        {/* Summary stats */}
+        <div className="report-section">
+          <div className="report-title">Overall Progress</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 }}>
+            <div className="stat-card">
+              <div className="stat-num">{total}</div>
+              <div className="stat-label">Total Qs</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-num" style={{ color: 'var(--green)' }}>{completed}</div>
+              <div className="stat-label">Completed</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-num" style={{ color: 'var(--yellow)' }}>{unsolved}</div>
+              <div className="stat-label">Unsolved</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-num" style={{ color: 'var(--yellow)' }}>{favorites}</div>
+              <div className="stat-label">Favorites</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-num" style={{ color: 'var(--primary)' }}>{notedCount}</div>
+              <div className="stat-label">Notes</div>
+            </div>
+            <div className="stat-card" style={{ alignItems: 'center' }}>
+              <div className="stat-num" style={{ color: pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)' }}>{pct}%</div>
+              <div className="stat-label">Progress</div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${pct}%`, background: pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--primary)' }}/>
+            </div>
+          </div>
+        </div>
+
+        {/* Lesson breakdown */}
+        {lessons.length > 0 && (
+          <div className="report-section">
+            <div className="report-title">Lesson Breakdown ({lessons.length} lessons)</div>
+            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+              <table className="report-table">
+                <thead>
+                  <tr>
+                    <th>Lesson</th>
+                    <th style={{ textAlign: 'center' }}>Total</th>
+                    <th style={{ textAlign: 'center' }}>Done</th>
+                    <th style={{ width: 100 }}>Progress</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lessons.map(([lesson, data]) => {
+                    const p = Math.round((data.done / data.total) * 100);
+                    return (
+                      <tr key={lesson}>
+                        <td style={{ fontSize: 12, maxWidth: 200 }}>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={lesson}>
+                            {lesson.length > 40 ? lesson.slice(0, 40) + '…' : lesson}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12 }}>{data.total}</td>
+                        <td style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--green)' }}>{data.done}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div className="progress-bar" style={{ flex: 1 }}>
+                              <div className="progress-bar-fill" style={{ width: `${p}%`, background: p === 100 ? 'var(--green)' : 'var(--primary)' }}/>
+                            </div>
+                            <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--muted)', minWidth: 28, textAlign: 'right' }}>{p}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="report-section">
+            <div className="report-title">Top Tags</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {tags.map(([tag, count]) => (
+                <span key={tag} className="tag-chip">
+                  <I.Tag/>{tag} <span style={{ fontFamily: 'var(--mono)', color: 'var(--primary)' }}>×{count}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Export report as text */}
+        <button className="btn" onClick={() => {
+          let txt = `QnA Hub — Study Report\n${'='.repeat(40)}\n\n`;
+          txt += `Total Questions: ${total}\nCompleted: ${completed} (${pct}%)\nUnsolved: ${unsolved}\nFavorites: ${favorites}\nNotes: ${notedCount}\n\n`;
+          txt += `Lesson Breakdown:\n${'-'.repeat(30)}\n`;
+          lessons.forEach(([l, d]) => { txt += `${l}: ${d.done}/${d.total}\n`; });
+          navigator.clipboard?.writeText(txt).then(() => alert('Copied to clipboard!'));
+        }}>
+          <I.Copy/> Copy Report
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== NOTE MODAL ====================
+function NoteModal({ qId, question, noteText, onSave, onClose }) {
+  const [text, setText] = useState(noteText || '');
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 14 }}>📝 Note — Q{qId}</div>
+        <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{question}</div>
+        <textarea
+          className="note-area"
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder="Add your notes, mnemonics, reminders..."
+          rows={6}
+          autoFocus
+        />
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={() => { onSave(qId, text); onClose(); }}>Save Note</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== MAIN APP ====================
+function App() {
+  // File state
+  const [activeFile, setActiveFile] = useState(AVAILABLE_FILES[0] || "");
+  const [questions, setQuestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const [availableLessons, setAvailableLessons] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Interaction state (persisted to localStorage)
+  const [favoriteIds, setFavoriteIds] = useState(() => new Set(loadLocal('favorites', [])));
+  const [completedIds, setCompletedIds] = useState(() => new Set(loadLocal('completed', [])));
+  const [notes, setNotes] = useState(() => loadLocal('notes', {}));
+
+  // View state
+  const [collapsedIds, setCollapsedIds] = useState(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeTab, setActiveTab] = useState('All');
+  const [selectedLessons, setSelectedLessons] = useState(new Set());
+  const [isLessonDropdownOpen, setIsLessonDropdownOpen] = useState(false);
+
+  const [displaySettings, setDisplaySettings] = useState(() => loadLocal('display', {
+    showOptions: true, showAnswer: true, showExplanation: true, showTags: true
+  }));
+  const [compact, setCompact] = useState(() => loadLocal('compact', false));
+  const [theme, setTheme] = useState(() => loadLocal('theme', 'dark'));
+
+  // UI state
+  const [isExporting, setIsExporting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+  const [showPractice, setShowPractice] = useState(false);
+  const [noteModal, setNoteModal] = useState(null); // { qId, question }
+  const [showSettings, setShowSettings] = useState(false);
+
+  const searchDebounceRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // ---- Persistence ----
+  useEffect(() => { saveLocal('favorites', Array.from(favoriteIds)); }, [favoriteIds]);
+  useEffect(() => { saveLocal('completed', Array.from(completedIds)); }, [completedIds]);
+  useEffect(() => { saveLocal('notes', notes); }, [notes]);
+  useEffect(() => { saveLocal('display', displaySettings); }, [displaySettings]);
+  useEffect(() => { saveLocal('compact', compact); }, [compact]);
+  useEffect(() => { saveLocal('theme', theme); }, [theme]);
+
+  // ---- Theme ----
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // ---- Search debounce ----
+  const handleSearchChange = (val) => {
+    setSearchQuery(val);
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => setDebouncedSearch(val), 200);
+  };
+
+  // ---- Toast ----
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // ---- File loading ----
+  const loadFile = (fileName) => {
+    setIsLoading(true);
+    setFetchError(null);
+    setSearchQuery(''); setDebouncedSearch('');
+    setSelectedLessons(new Set());
+    setCollapsedIds(new Set());
+    setActiveTab('All');
+
+    fetch(fileName)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(text => {
+        const { parsed, lessons } = parseTextData(text);
+        setQuestions(parsed);
+        setAvailableLessons(lessons);
+        setIsLoading(false);
+        showToast(`Loaded ${parsed.length} questions`);
+      })
+      .catch(err => {
+        setFetchError(`Cannot load "${fileName}". ${err.message}`);
+        setIsLoading(false);
+      });
+  };
+
+  // ---- File upload ----
+  const handleFileUpload = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const { parsed, lessons } = parseTextData(text);
+      setQuestions(parsed);
+      setAvailableLessons(lessons);
+      setActiveFile(file.name);
+      setSearchQuery(''); setDebouncedSearch('');
+      setSelectedLessons(new Set());
+      setCollapsedIds(new Set());
+      setActiveTab('All');
+      setFetchError(null);
+      showToast(`Loaded ${parsed.length} questions from "${file.name}"`);
+    };
+    reader.readAsText(file);
+  };
+
+  // ---- Auto-load first file ----
+  useEffect(() => {
+    if (activeFile && AVAILABLE_FILES.includes(activeFile)) loadFile(activeFile);
+  }, []);
+
+  // ---- Toggles ----
+  const toggle = (setter) => (id) => {
+    setter(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+  const toggleFavorite = toggle(setFavoriteIds);
+  const toggleCompleted = toggle(setCompletedIds);
+  const toggleCollapse = toggle(setCollapsedIds);
+
+  const toggleCollapseAll = () => {
+    if (collapsedIds.size > 0) setCollapsedIds(new Set());
+    else setCollapsedIds(new Set(questions.map(q => q.id)));
+  };
+
+  const toggleLesson = (lesson) => {
+    setSelectedLessons(prev => {
+      const n = new Set(prev); n.has(lesson) ? n.delete(lesson) : n.add(lesson); return n;
+    });
+  };
+
+  const saveNote = (qId, text) => {
+    setNotes(prev => ({ ...prev, [qId]: text }));
+    showToast('Note saved');
+  };
+
+  // ---- Filtered questions ----
+  const visibleQuestions = useMemo(() => {
+    let filtered = questions;
+
+    if (selectedLessons.size > 0) filtered = filtered.filter(q => selectedLessons.has(q.lesson));
+
+    const q = debouncedSearch.trim();
+    if (q) {
+      const range = q.match(/^(\d+)\s*-\s*(\d+)$/);
+      const ids = q.match(/^(\d+\s*,\s*)*\d+$/);
+      if (range) {
+        const s = parseInt(range[1]), e = parseInt(range[2]);
+        filtered = filtered.filter(x => x.id >= s && x.id <= e);
+      } else if (ids) {
+        const idList = q.split(',').map(x => parseInt(x.trim()));
+        filtered = filtered.filter(x => idList.includes(x.id));
+      } else {
+        const lower = q.toLowerCase();
+        filtered = filtered.filter(x =>
+          x.question.toLowerCase().includes(lower) ||
+          x.options.some(o => o.toLowerCase().includes(lower)) ||
+          (x.explanation && x.explanation.toLowerCase().includes(lower)) ||
+          (x.tag && x.tag.toLowerCase().includes(lower)) ||
+          (x.answerText && x.answerText.toLowerCase().includes(lower))
+        );
+      }
+    }
+
+    if (activeTab === 'Favorites') filtered = filtered.filter(x => favoriteIds.has(x.id));
+    else if (activeTab === 'Completed') filtered = filtered.filter(x => completedIds.has(x.id));
+    else if (activeTab === 'Unsolved') filtered = filtered.filter(x => !completedIds.has(x.id));
+
+    return filtered;
+  }, [questions, debouncedSearch, activeTab, favoriteIds, completedIds, selectedLessons]);
+
+  const progressPct = questions.length > 0 ? Math.round((completedIds.size / questions.length) * 100) : 0;
+
+  // ---- Export ----
+  const exportToText = () => {
+    if (!visibleQuestions.length) return showToast('Nothing to export', 'warn');
+    let text = `QnA Hub Export\n${'='.repeat(50)}\n\n`;
+    visibleQuestions.forEach(q => {
+      text += `[ID: ${q.id}] ${q.lesson !== 'General' ? '[' + q.lesson + ']' : ''}\n${q.question}\n`;
+      if (displaySettings.showOptions && q.options.length > 0)
+        q.options.forEach((o, i) => { text += `  ${String.fromCharCode(65+i)}) ${o}\n`; });
+      if (displaySettings.showAnswer) text += `  ✓ Answer: ${q.answerKey ? q.answerKey + ' — ' : ''}${q.answerText}\n`;
+      if (displaySettings.showExplanation && q.explanation) text += `  📖 ${q.explanation}\n`;
+      if (displaySettings.showTags && q.tag) text += `  🏷 ${q.tag}\n`;
+      if (notes[q.id]) text += `  📝 Note: ${notes[q.id]}\n`;
+      text += `\n${'—'.repeat(40)}\n\n`;
+    });
+    navigator.clipboard?.writeText(text).then(() => showToast('Copied to clipboard!'));
+  };
+
+  const exportToPDF = () => {
+    if (!visibleQuestions.length) return showToast('Nothing to export', 'warn');
+    setIsExporting(true);
+    showToast('Generating PDF...');
+    const element = document.getElementById('q-list');
+    html2pdf().set({
+      margin: 0.5,
+      filename: `QnA_${activeTab}_${Date.now()}.pdf`,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, windowWidth: 900 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    }).from(element).save().then(() => {
+      setIsExporting(false); showToast('PDF exported!');
+    }).catch(() => { setIsExporting(false); showToast('PDF failed', 'error'); });
+  };
+
+  // ---- Tabs config ----
+  const tabs = [
+    { id: 'All', label: 'All', count: questions.length, icon: <I.List/> },
+    { id: 'Unsolved', label: 'Unsolved', count: questions.length - completedIds.size, icon: <I.Warning/> },
+    { id: 'Favorites', label: 'Stars', count: favoriteIds.size, icon: <I.Star filled={activeTab==='Favorites'}/> },
+    { id: 'Completed', label: 'Done', count: completedIds.size, icon: <I.CheckCircle/> },
+  ];
+
+  const practicePool = useMemo(() => visibleQuestions.filter(q => q.options && q.options.length > 0), [visibleQuestions]);
+
+  // ---- Render ----
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+
+      {/* === HEADER === */}
+      <div className="header">
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 900 }}>Q</div>
+          <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em' }}>QnA Hub</span>
+        </div>
+
+        {/* Center: file selector & upload */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, margin: '0 16px', maxWidth: 500 }}>
+          {AVAILABLE_FILES.length > 1 && (
+            <select className="input" style={{ maxWidth: 220 }} value={activeFile} onChange={e => { setActiveFile(e.target.value); loadFile(e.target.value); }}>
+              {AVAILABLE_FILES.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          )}
+          <button className="btn" onClick={() => fileInputRef.current?.click()} title="Upload .txt or .csv file">
+            <I.Upload/> <span style={{ display: window.innerWidth > 500 ? undefined : 'none' }}>Upload</span>
+          </button>
+          <input ref={fileInputRef} type="file" accept=".txt,.csv,.tsv" style={{ display: 'none' }}
+            onChange={e => { if (e.target.files[0]) handleFileUpload(e.target.files[0]); }}
+          />
+        </div>
+
+        {/* Right: actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {questions.length > 0 && <>
+            <button className="btn btn-ghost" onClick={() => setShowReport(true)} title="Report">
+              <I.BarChart/>
+            </button>
+            {practicePool.length > 0 && (
+              <button className="btn btn-primary" onClick={() => setShowPractice(true)} style={{ padding: '7px 12px' }}>
+                <I.Brain/> <span style={{ display: window.innerWidth > 600 ? undefined : 'none' }}>Practice</span>
+              </button>
+            )}
+          </>}
+          {/* Theme toggle */}
+          <button className="btn btn-ghost" onClick={() => {
+            const t = theme === 'dark' ? 'light' : theme === 'light' ? 'sepia' : 'dark';
+            setTheme(t);
+          }} title="Toggle theme">
+            {theme === 'dark' ? <I.Sun/> : theme === 'light' ? <I.Moon/> : '📜'}
+          </button>
+        </div>
+      </div>
+
+      {/* === TABS + PROGRESS === */}
+      {questions.length > 0 && (
+        <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 24px', position: 'sticky', top: 60, zIndex: 40 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, maxWidth: 1200, margin: '0 auto', height: 52 }}>
+            <div style={{ display: 'flex', gap: 4, overflow: 'auto', paddingBottom: 2 }}>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`tab-btn ${activeTab === tab.id ? (tab.id === 'Unsolved' ? 'active-unsolved' : tab.id === 'Favorites' ? 'active-fav' : 'active') : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.icon} {tab.label}
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.8, background: 'rgba(255,255,255,0.15)', padding: '1px 5px', borderRadius: 4 }}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{progressPct}%</span>
+              <div className="progress-bar" style={{ width: 100 }}>
+                <div className="progress-bar-fill" style={{ width: `${progressPct}%`, background: progressPct >= 80 ? 'var(--green)' : 'var(--primary)' }}/>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === TOOLBAR === */}
+      {questions.length > 0 && !isLoading && (
+        <div style={{ background: 'var(--surface)', padding: '12px 24px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+
+            {/* Lesson filter */}
+            <div style={{ position: 'relative', minWidth: 180 }}>
+              <button className="btn" onClick={() => setIsLessonDropdownOpen(v => !v)} style={{ width: '100%' }}>
+                <I.Filter/>
+                {selectedLessons.size === 0 ? 'All Lessons' : `${selectedLessons.size} lesson(s)`}
+                <I.ChevronDown/>
+              </button>
+              {isLessonDropdownOpen && (
+                <div className="dropdown" style={{ width: 280 }}>
+                  <div className="dropdown-item" onClick={() => { setSelectedLessons(new Set()); setIsLessonDropdownOpen(false); }}
+                    style={{ color: 'var(--primary)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>
+                    ✕ Clear filter
+                  </div>
+                  {availableLessons.map(l => (
+                    <div key={l} className="dropdown-item" onClick={() => toggleLesson(l)}>
+                      <input type="checkbox" checked={selectedLessons.has(l)} onChange={() => {}} style={{ accentColor: 'var(--primary)' }}/>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l}>{l}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Search */}
+            <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}><I.Search/></div>
+              <input
+                className="input"
+                style={{ paddingLeft: 34 }}
+                placeholder="Search text, ID, or range (e.g. 1-50)..."
+                value={searchQuery}
+                onChange={e => handleSearchChange(e.target.value)}
+              />
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}>
+                  <I.X/>
+                </button>
+              )}
+            </div>
+
+            {/* Display toggles */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {[
+                { key: 'showOptions', label: 'Options' },
+                { key: 'showAnswer', label: 'Answers' },
+                { key: 'showExplanation', label: 'Explain' },
+                { key: 'showTags', label: 'Tags' },
+              ].map(s => (
+                <button key={s.key} className="btn" onClick={() => setDisplaySettings(p => ({ ...p, [s.key]: !p[s.key] }))}
+                  style={{ padding: '6px 10px', fontSize: 12, ...(displaySettings[s.key] ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' } : { opacity: 0.6 }) }}>
+                  {displaySettings[s.key] ? <I.Eye/> : <I.EyeOff/>} {s.label}
+                </button>
+              ))}
+              <button className="btn" onClick={() => setCompact(v => !v)}
+                style={{ padding: '6px 10px', fontSize: 12, ...(compact ? { background: 'var(--card2)', borderColor: 'var(--border2)' } : {}) }}>
+                {compact ? '⊡ Normal' : '⊟ Compact'}
+              </button>
+              <button className="btn" onClick={toggleCollapseAll} style={{ padding: '6px 10px', fontSize: 12 }}>
+                {collapsedIds.size > 0 ? '↕ Expand' : '↕ Collapse'}
+              </button>
+            </div>
+
+            {/* Spacer */}
+            <div style={{ flex: 1 }}/>
+
+            {/* Export buttons */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn" onClick={exportToText}><I.Copy/> Copy</button>
+              <button className="btn" onClick={exportToPDF} disabled={isExporting}>
+                {isExporting ? <I.Loader/> : <I.Download/>} PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === MAIN CONTENT === */}
+      <main style={{ flex: 1, maxWidth: 1200, width: '100%', margin: '0 auto', padding: '20px 24px', boxSizing: 'border-box' }}>
+
+        {/* Upload drop zone (when no questions) */}
+        {!isLoading && !fetchError && questions.length === 0 && (
+          <div
+            className={`upload-zone ${isDragOver ? 'drag-over' : ''} animate-fade-in`}
+            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={e => {
+              e.preventDefault(); setIsDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f) handleFileUpload(f);
+            }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Drop your question file here</div>
+            <div style={{ color: 'var(--muted)', fontSize: 13 }}>or click to browse — supports .txt, .csv, .tsv (Anki format)</div>
+          </div>
+        )}
+
+        {/* Loading */}
+        {isLoading && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 80, gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 600 }}>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="shimmer" style={{ height: compact ? 60 : 90, borderRadius: 12, animationDelay: `${i * 0.1}s` }}/>
+              ))}
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <I.Loader/> Parsing questions...
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {fetchError && !isLoading && (
+          <div style={{ textAlign: 'center', padding: 60 }} className="animate-fade-in">
+            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: 'var(--red)' }}>Failed to load file</div>
+            <div style={{ color: 'var(--muted)', fontSize: 13, maxWidth: 400, margin: '0 auto 20px' }}>{fetchError}</div>
+            <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>Upload Manually</button>
+          </div>
+        )}
+
+        {/* Questions list */}
+        {!isLoading && !fetchError && questions.length > 0 && (
+          <>
+            {/* Result count */}
+            <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 14, fontFamily: 'var(--mono)' }}>
+              {visibleQuestions.length === questions.length
+                ? `Showing all ${questions.length} questions`
+                : `Showing ${visibleQuestions.length} of ${questions.length} questions`
+              }
+              {debouncedSearch && <span> for "<b style={{ color: 'var(--text)' }}>{debouncedSearch}</b>"</span>}
+            </div>
+
+            {visibleQuestions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 60, border: '2px dashed var(--border2)', borderRadius: 16, color: 'var(--muted)' }} className="animate-fade-in">
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>No questions match</div>
+                <div style={{ fontSize: 13 }}>Try adjusting your search or filters</div>
+              </div>
+            ) : (
+              <div id="q-list">
+                {visibleQuestions.map((q) => (
+                  <QuestionCard
+                    key={q.id}
+                    q={q}
+                    isCollapsed={collapsedIds.has(q.id)}
+                    isFavorite={favoriteIds.has(q.id)}
+                    isCompleted={completedIds.has(q.id)}
+                    isUnsolved={!completedIds.has(q.id)}
+                    displaySettings={displaySettings}
+                    searchQuery={debouncedSearch}
+                    onToggleCollapse={toggleCollapse}
+                    onToggleFavorite={toggleFavorite}
+                    onToggleCompleted={toggleCompleted}
+                    onOpenNote={(qId) => setNoteModal({ qId, question: q.question })}
+                    noteText={notes[q.id] || ''}
+                    compact={compact}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </main>
+
+      {/* === MODALS === */}
+      {showReport && (
+        <ReportModal
+          questions={questions}
+          favoriteIds={favoriteIds}
+          completedIds={completedIds}
+          notes={notes}
+          onClose={() => setShowReport(false)}
+        />
+      )}
+
+      {showPractice && (
+        <PracticeMode
+          questions={practicePool}
+          onClose={() => setShowPractice(false)}
+        />
+      )}
+
+      {noteModal && (
+        <NoteModal
+          qId={noteModal.qId}
+          question={noteModal.question}
+          noteText={notes[noteModal.qId] || ''}
+          onSave={saveNote}
+          onClose={() => setNoteModal(null)}
+        />
+      )}
+
+      {/* === TOAST === */}
+      {toast && (
+        <div className="toast" style={{
+          background: toast.type === 'error' ? 'var(--red)' : toast.type === 'warn' ? 'var(--yellow)' : 'var(--green)',
+          color: '#fff'
+        }}>
+          {toast.type === 'error' ? '⚠' : toast.type === 'warn' ? '⚠' : '✓'} {toast.msg}
+        </div>
+      )}
+
+      {/* Close dropdowns on outside click */}
+      {isLessonDropdownOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setIsLessonDropdownOpen(false)}/>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>
-
-
