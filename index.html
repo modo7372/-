@@ -71,7 +71,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .id-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;background:var(--pg);color:var(--primary);border:1px solid var(--primary);font-weight:500}
 .upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:50px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--primary);background:var(--pg)}
-.q-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s;overflow:hidden}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s;overflow:hidden;contain:layout style}
 .q-card:hover{border-color:var(--border2)}.q-card.done{border-left:3px solid var(--green);opacity:.85}
 .q-card.pinned{border-left:3px solid var(--yellow)}.q-card.weak-card{border-left:3px solid var(--red)}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s}
@@ -107,7 +107,7 @@ const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 
 // ═══════════════════════════════ CONFIG ═══════════════════════════════
 const AVAILABLE_FILES = [
-  "Infections.txt"
+  "Infections-Raihana Med ريحانة الطdب.txt"
 ];
 const SK = "qna4_"; // storage key prefix
 
@@ -251,16 +251,19 @@ function ShortcutsPanel({ onClose }) {
       ['Space', 'Expand / collapse current'],
       ['F', 'Toggle favorite'], ['D', 'Mark done / undone'],
       ['P', 'Pin / unpin question'], ['N', 'Open note editor'],
-      ['Opts btn', 'Per-card options show/hide (cycles: global → show → hide)'],
-      ['Exp btn', 'Per-card explanation show/hide'],
-      ['Ans btn', 'Per-card answer show/hide'],
-      ['Copy btn', 'Copy question + answer to clipboard (shows ✓ animation)'],
+      ['Opts', 'Per-card options (cycles: global → show → hide)'],
+      ['Exp', 'Per-card explanation show/hide'],
+      ['Ans', 'Per-card answer show/hide'],
+      ['Copy', 'Copy question to clipboard (✓ animation on success)'],
     ]},
     { title: 'Global', items: [
-      ['Ctrl+K', 'Show keyboard shortcuts'], ['Ctrl+R', 'Open report'],
-      ['Ctrl+P', 'Start practice mode'], ['Ctrl+E', 'Start exam simulator'],
-      ['Ctrl+A', 'Toggle ALL answers globally (resets per-card overrides)'],
-      ['Ctrl+/', 'Toggle compact mode'], ['T', 'Cycle theme'],
+      ['Ctrl+K', 'Show keyboard shortcuts'],
+      ['Ctrl+R', 'Open report'],
+      ['Ctrl+P', 'Start practice mode'],
+      ['Ctrl+E', 'Start exam simulator'],
+      ['Ctrl+A', 'Reveal/hide ALL answers (clears per-card overrides)'],
+      ['Ctrl+/', 'Toggle compact mode'],
+      ['T', 'Cycle theme'],
     ]},
   ];
   return (
@@ -893,11 +896,17 @@ function PracticeMode({ questions, mode, onClose, onRateSR, weakIds, onAddWrong,
           </>
         )}
 
-        {!shown && q.options && q.options.length>0 && (
-          <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
+        <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:8}}>
+          {isExam && idx+1 < deck.length && (
+            <button className="btn primary" onClick={next}>Next →</button>
+          )}
+          {isExam && idx+1 >= deck.length && (
+            <button className="btn primary" onClick={submitExam}>Submit Exam</button>
+          )}
+          {!isExam && !shown && q.options && q.options.length>0 && (
             <button className="btn" onClick={skip}>Skip</button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1107,7 +1116,7 @@ const QuestionCard = memo(function QuestionCard({
   return (
     <div
       id={`q-${q.id}`}
-      className={`q-card afu ${isDone?'done':''} ${isPinned&&!isDone?'pinned':''} ${isWeak&&!isDone&&!isPinned?'weak-card':''}`}
+      className={`q-card ${isDone?'done':''} ${isPinned&&!isDone?'pinned':''} ${isWeak&&!isDone&&!isPinned?'weak-card':''}`}
       style={{marginBottom:compact?6:12,outline:focused?'2px solid var(--primary)':'none',outlineOffset:2}}
       onClick={onFocusClick}
     >
@@ -1167,7 +1176,7 @@ const QuestionCard = memo(function QuestionCard({
 
       {/* Body */}
       {!isCollapsed && (
-        <div style={{borderTop:'1px solid var(--border)',padding:compact?'8px 13px 12px':'12px 16px 16px'}} className="afi">
+        <div style={{borderTop:'1px solid var(--border)',padding:compact?'8px 13px 12px':'12px 16px 16px'}}>
           {/* Options */}
           {showOpts&&q.options&&q.options.length>0&&(
             <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:8}}>
@@ -1233,6 +1242,53 @@ const QuestionCard = memo(function QuestionCard({
     </div>
   );
 });
+
+
+// ═══════════════════════════════ VIRTUAL LIST ═══════════════════════════════
+// Renders only the cards visible in the viewport + overscan buffer.
+// Each card gets a fixed estimated height so we can pre-compute total scroll height.
+const CARD_HEIGHT_NORMAL  = 80;   // collapsed card height (approx)
+const CARD_HEIGHT_COMPACT = 50;
+const OVERSCAN = 8; // extra items above/below viewport
+
+function VirtualList({ items, renderItem, compact }) {
+  const containerRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewHeight, setViewHeight] = useState(window.innerHeight);
+
+  const itemH = compact ? CARD_HEIGHT_COMPACT : CARD_HEIGHT_NORMAL;
+  const totalH = items.length * itemH;
+
+  useEffect(() => {
+    const onScroll = () => setScrollTop(window.scrollY);
+    const onResize = () => setViewHeight(window.innerHeight);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+
+  // Compute which range of items to render
+  const containerTop = containerRef.current ? containerRef.current.getBoundingClientRect().top + window.scrollY : 0;
+  const relScroll = Math.max(0, scrollTop - containerTop);
+
+  const startIdx = Math.max(0, Math.floor(relScroll / itemH) - OVERSCAN);
+  const visCount = Math.ceil(viewHeight / itemH) + OVERSCAN * 2;
+  const endIdx   = Math.min(items.length, startIdx + visCount);
+
+  const paddingTop    = startIdx * itemH;
+  const paddingBottom = Math.max(0, (items.length - endIdx) * itemH);
+
+  return (
+    <div ref={containerRef} style={{ position:'relative' }}>
+      <div style={{ height: paddingTop }} />
+      {items.slice(startIdx, endIdx).map((item, i) => renderItem(item, startIdx + i))}
+      <div style={{ height: paddingBottom }} />
+    </div>
+  );
+}
 
 // ═══════════════════════════════ MAIN APP ═══════════════════════════════
 function App() {
@@ -1373,61 +1429,70 @@ function App() {
 
   useEffect(()=>{ if(activeFile&&AVAILABLE_FILES.includes(activeFile)) loadFile(activeFile); },[]);
 
-  // ── Toggles ──
-  const tog = setter => id => setter(prev=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
-  const toggleFav = tog(setFavIds);
-  const toggleDone = tog(setCompletedIds);
-  const togglePin = tog(setPinnedIds);
-  const toggleCollapse = tog(setCollapsedIds);
-  const toggleCollapseAll = () => { if(collapsedIds.size>0) setCollapsedIds(new Set()); else setCollapsedIds(new Set(questions.map(q=>q.id))); };
-  const toggleLesson = l => { setSelectedLessons(prev=>{ const n=new Set(prev); n.has(l)?n.delete(l):n.add(l); return n; }); };
+  // ── Toggles (useCallback keeps QuestionCard.memo() effective) ──
+  const toggleFav      = useCallback((id) => setFavIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
+  const toggleDone     = useCallback((id) => setCompletedIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
+  const togglePin      = useCallback((id) => setPinnedIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
+  const toggleCollapse = useCallback((id) => setCollapsedIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}), []);
+  const toggleCollapseAll = useCallback(() => {
+    setCollapsedIds(prev => prev.size>0 ? new Set() : new Set(questions.map(q=>q.id)));
+  }, [questions]);
+  const toggleLesson = useCallback(l => {
+    setSelectedLessons(prev=>{ const n=new Set(prev); n.has(l)?n.delete(l):n.add(l); return n; });
+  }, []);
 
-  const toggleLocalAns = (qId) => {
+  const toggleLocalAns = useCallback((qId) => {
     setLocalAnsOverrides(prev => {
       const cur = prev[qId];
-      // cycle: undefined(follow global) → true(show) → false(hide) → undefined
       if (cur === undefined) return { ...prev, [qId]: true };
       if (cur === true) return { ...prev, [qId]: false };
       const n = { ...prev }; delete n[qId]; return n;
     });
-  };
-  const toggleLocalOpt = (qId) => {
+  }, []);
+  const toggleLocalOpt = useCallback((qId) => {
     setLocalOptOverrides(prev => {
       const cur = prev[qId];
       if (cur === undefined) return { ...prev, [qId]: true };
       if (cur === true) return { ...prev, [qId]: false };
       const n = { ...prev }; delete n[qId]; return n;
     });
-  };
-  const toggleLocalExp = (qId) => {
+  }, []);
+  const toggleLocalExp = useCallback((qId) => {
     setLocalExpOverrides(prev => {
       const cur = prev[qId];
       if (cur === undefined) return { ...prev, [qId]: true };
       if (cur === true) return { ...prev, [qId]: false };
       const n = { ...prev }; delete n[qId]; return n;
     });
-  };
-  const saveCustomTag = (qId, tag) => { setCustomTags(prev=>({...prev,[qId]:tag})); };
+  }, []);
+  const saveNote = useCallback((qId, text) => { setNotes(prev=>({...prev,[qId]:text})); }, []);
+  const saveCustomTag = useCallback((qId, tag) => { setCustomTags(prev=>({...prev,[qId]:tag})); }, []);
 
-  const rateSR = (qId, quality) => {
+  const rateSR = useCallback((qId, quality) => {
     setSrData(prev=>({ ...prev, [qId]: sm2(prev[qId], quality) }));
-  };
-  const addWrong = (qId) => {
+  }, []);
+  const addWrong = useCallback((qId) => {
     setWrongCounts(prev=>({ ...prev, [qId]: (prev[qId]||0)+1 }));
-  };
-  const markDone = (qId) => {
+  }, []);
+  const markDone = useCallback((qId) => {
     setCompletedIds(prev => { const n=new Set(prev); n.add(qId); return n; });
-  };
-  const markWeak = (qId) => {
-    // Weak = wrong ≥ 3; bump count to at least 3
+  }, []);
+  const markWeak = useCallback((qId) => {
     setWrongCounts(prev => ({ ...prev, [qId]: Math.max((prev[qId]||0)+1, 3) }));
-  };
+  }, []);
 
-  // ── Search debounce ──
+  // ── Search debounce with deferred update ──
   const handleSearch = val => {
     setSearchQuery(val);
     clearTimeout(searchDebRef.current);
-    searchDebRef.current = setTimeout(()=>setDSearch(val), 180);
+    searchDebRef.current = setTimeout(() => {
+      // Use startTransition so the expensive filter doesn't block input
+      if (typeof React.startTransition === 'function') {
+        React.startTransition(() => setDSearch(val));
+      } else {
+        setDSearch(val);
+      }
+    }, 250);
   };
 
   // ── Filtered questions ──
@@ -1465,6 +1530,28 @@ function App() {
   },[questions,dSearch,activeTab,activeCollId,favIds,completedIds,pinnedIds,selectedLessons,srData,weakIds,collections,customTags]);
 
   const pct = questions.length>0?Math.round((completedIds.size/questions.length)*100):0;
+
+  // ── Precomputed per-question collections (avoids O(n²) in render) ──
+  const qCollectionsMap = useMemo(() => {
+    const map = {};
+    collections.forEach(c => {
+      c.qIds.forEach(qId => {
+        if (!map[qId]) map[qId] = [];
+        map[qId].push(c);
+      });
+    });
+    return map;
+  }, [collections]);
+
+  // ── Stable modal opener callbacks (avoid recreating on every render) ──
+  const openNote = useCallback((qId) => {
+    const q = questions.find(x => x.id === qId);
+    if (q) setNoteModal({ qId, question: q.question });
+  }, [questions]);
+  const openTag = useCallback((qId) => {
+    const q = questions.find(x => x.id === qId);
+    if (q) setTagModal({ qId, question: q.question });
+  }, [questions]);
   const srDueCount = useMemo(()=>questions.filter(q=>isDue(srData[q.id])).length,[questions,srData]);
 
   // ── Keyboard shortcuts ──
@@ -1771,30 +1858,33 @@ function App() {
               </div>
             ):(
               <div id="q-list">
-                {visibleQuestions.map((q,i)=>{
-                  const qCollections = collections.filter(c=>c.qIds.includes(q.id));
-                  return (
-                    <QuestionCard key={q.id} q={q}
-                      isCollapsed={collapsedIds.has(q.id)} isFav={favIds.has(q.id)}
-                      isDone={completedIds.has(q.id)} isPinned={pinnedIds.has(q.id)}
-                      isWeak={weakIds.has(q.id)} srCard={srData[q.id]} isDue={isDue(srData[q.id])}
-                      displaySettings={displaySettings} searchQ={dSearch}
-                      onToggleCollapse={toggleCollapse} onToggleFav={toggleFav}
-                      onToggleDone={toggleDone} onTogglePin={togglePin}
-                      onOpenNote={qId=>setNoteModal({qId,question:q.question})}
-                      noteText={notes[q.id]||''} onOpenTag={qId=>setTagModal({qId,question:q.question})}
-                      customTag={customTags[q.id]||''}
-                      compact={compact} collections={qCollections}
-                      focused={focusedIdx===i} onFocusClick={()=>setFocusedIdx(i)}
-                      localAnsOverride={localAnsOverrides[q.id]}
-                      onToggleLocalAns={toggleLocalAns}
-                      localOptOverride={localOptOverrides[q.id]}
-                      onToggleLocalOpt={toggleLocalOpt}
-                      localExpOverride={localExpOverrides[q.id]}
-                      onToggleLocalExp={toggleLocalExp}
-                    />
-                  );
-                })}
+                <VirtualList
+                  items={visibleQuestions}
+                  compact={compact}
+                  renderItem={(q, i) => {
+                    const qCollections = qCollectionsMap[q.id] || [];
+                    return (
+                      <QuestionCard key={q.id} q={q}
+                        isCollapsed={collapsedIds.has(q.id)} isFav={favIds.has(q.id)}
+                        isDone={completedIds.has(q.id)} isPinned={pinnedIds.has(q.id)}
+                        isWeak={weakIds.has(q.id)} srCard={srData[q.id]} isDue={isDue(srData[q.id])}
+                        displaySettings={displaySettings} searchQ={dSearch}
+                        onToggleCollapse={toggleCollapse} onToggleFav={toggleFav}
+                        onToggleDone={toggleDone} onTogglePin={togglePin}
+                        onOpenNote={openNote} noteText={notes[q.id]||''}
+                        onOpenTag={openTag} customTag={customTags[q.id]||''}
+                        compact={compact} collections={qCollections}
+                        focused={focusedIdx===i} onFocusClick={()=>setFocusedIdx(i)}
+                        localAnsOverride={localAnsOverrides[q.id]}
+                        onToggleLocalAns={toggleLocalAns}
+                        localOptOverride={localOptOverrides[q.id]}
+                        onToggleLocalOpt={toggleLocalOpt}
+                        localExpOverride={localExpOverrides[q.id]}
+                        onToggleLocalExp={toggleLocalExp}
+                      />
+                    );
+                  }}
+                />
               </div>
             )}
           </>
