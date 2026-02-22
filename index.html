@@ -2227,8 +2227,7 @@ function App() {
         }]
       });
 
-      const buffer = await Packer.toBuffer(doc);
-      const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href=url;
       a.download = `QnA_${(titleLabel||'export').replace(/[^a-z0-9]/gi,'_')}.docx`;
@@ -2390,9 +2389,9 @@ function App() {
                   )}
                   {!isOpen&&<div style={{flex:1}}/>}
 
-                  {/* Actions for user sets */}
-                  {isUser&&(
-                    <div className="set-actions">
+                  {/* Actions */}
+                  <div className="set-actions">
+                    {isUser&&<>
                       <button className="set-action-btn" onClick={()=>{setActiveSetId(set.id);setShowCollections(true);}}>✎ Edit</button>
                       {collectionSets.filter(s=>s.type==='user').length<6&&(
                         <button className="set-action-btn" title="Add new user set"
@@ -2403,15 +2402,25 @@ function App() {
                           }}>+ Set</button>
                       )}
                       {collectionSets.filter(s=>s.type==='user').length>1&&(
-                        <button className="set-action-btn" title="Delete this set"
-                          style={{color:'var(--red)'}}
+                        <button className="set-action-btn" style={{color:'var(--red)'}}
+                          title="Delete this set"
                           onClick={()=>{
                             setCollectionSets(prev=>prev.filter(s=>s.id!==set.id));
                             setActiveSetId(collectionSets.find(s=>s.type==='user'&&s.id!==set.id)?.id||'set-lessons');
                           }}>✕</button>
                       )}
-                    </div>
-                  )}
+                    </>}
+                    {!isUser&&(
+                      <button className="set-action-btn" title={`Regenerate "${set.name}" from current questions`}
+                        onClick={()=>{
+                          if(!questions.length) return;
+                          const sys = buildSystemSets(questions, availableLessons);
+                          const updated = sys.find(s=>s.id===set.id);
+                          if(updated) setCollectionSets(prev=>prev.map(s=>s.id===set.id?updated:s));
+                          showToast(`↺ ${set.name} refreshed`);
+                        }}>↺ Reset</button>
+                    )}
+                  </div>
                 </div>
               );
             })}
