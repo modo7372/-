@@ -8,6 +8,8 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script>window.docxLib = window.docx;</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -22,6 +24,19 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .3s,color .3s;overflow-x:hidden}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--primary);border-radius:4px}
+
+.set-panel{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:58px;z-index:40}
+.set-row{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);min-height:36px}
+.set-label{display:flex;align-items:center;gap:6px;padding:0 12px;min-width:140px;border-right:1px solid var(--border);cursor:pointer;transition:background .15s;user-select:none}
+.set-label:hover{background:var(--card2)}
+.set-chips{display:flex;gap:5px;padding:5px 12px;overflow-x:auto;flex:1;align-items:center}
+.set-chips::-webkit-scrollbar{height:3px}
+.coll-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:var(--font);border:1px solid var(--border2);background:var(--card2);color:var(--muted);flex-shrink:0}
+.coll-chip.active{box-shadow:0 0 0 2px currentColor}
+.coll-chip-prog{width:28px;height:3px;border-radius:2px;background:var(--border2);overflow:hidden;flex-shrink:0}
+.set-actions{display:flex;gap:4px;padding:0 8px;border-left:1px solid var(--border);flex-shrink:0}
+.set-action-btn{background:none;border:1px solid var(--border2);border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer;color:var(--muted);font-family:var(--font);transition:all .15s}
+.set-action-btn:hover{color:var(--text);border-color:var(--primary)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideR{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
@@ -480,8 +495,9 @@ function CollectionRow({ c, idx, isActive, onSelect, onDelete, onRename, onRecol
 }
 
 
-function CollectionsModal({ questions, collections, onSave, onClose, pinnedIds, favIds, completedIds, wrongIds }) {
+function CollectionsModal({ questions, collections, setName, onSave, onClose, pinnedIds, favIds, completedIds, wrongIds }) {
   const [colls, setColls] = useState(() => JSON.parse(JSON.stringify(collections)));
+  const [editedSetName, setEditedSetName] = useState(setName||'My Collections');
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#5b8dee');
   const [active, setActive] = useState(null);
@@ -543,9 +559,16 @@ function CollectionsModal({ questions, collections, onSave, onClose, pinnedIds, 
 
         {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
-          <div style={{ fontWeight:800, fontSize:17, display:'flex', gap:8, alignItems:'center' }}><I.Folder/> Collections</div>
+          <div style={{ fontWeight:800, fontSize:17, display:'flex', gap:8, alignItems:'center' }}>
+            <I.Folder/>
+            <input value={editedSetName} onChange={e=>setEditedSetName(e.target.value)}
+              style={{background:'transparent',border:'none',outline:'none',fontWeight:800,fontSize:17,
+                color:'var(--text)',fontFamily:'var(--font)',borderBottom:'1px dashed var(--border2)',
+                paddingBottom:1,minWidth:60,maxWidth:180}}
+              title="Set name — click to rename"/>
+          </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button className="btn primary" onClick={() => onSave(colls)}>Save All</button>
+            <button className="btn primary" onClick={() => onSave(colls, editedSetName)}>Save All</button>
             <button className="btn ghost" onClick={onClose}><I.X s={15}/></button>
           </div>
         </div>
@@ -1575,7 +1598,17 @@ function App() {
   const [customTags, setCustomTags] = useState(()=>load('ctags',{})); // {qId: tag}
   const [srData, setSrData] = useState(()=>load('sr',{})); // {qId: {interval,easeFactor,repetitions,nextDue}}
   const [wrongCounts, setWrongCounts] = useState(()=>load('wrong',{})); // {qId: count}
-  const [collections, setCollections] = useState(()=>load('collections',[]));
+  // collectionSets: [{id, name, type:'lesson'|'numeric'|'user', colls:[{id,name,color,qIds}]}]
+  const [collectionSets, setCollectionSets] = useState(() => {
+    const saved = load('collectionSets', null);
+    if (saved) return saved;
+    const old = load('collections', []); // migrate legacy flat array
+    return [{ id:'set-user-1', name:'My Collections', type:'user', colls: old }];
+  });
+  const [activeSetId, setActiveSetId] = useState(() => {
+    const saved = load('collectionSets', null);
+    return saved && saved.length ? saved[0].id : 'set-user-1';
+  });
   const [sessions, setSessions] = useState(()=>load('sessions',[]));
   const [streak, setStreak] = useState(()=>load('streak',0));
 
@@ -1622,6 +1655,8 @@ function App() {
 
   // Weak spots: wrong ≥ 3
   const weakIds = useMemo(()=>new Set(Object.entries(wrongCounts).filter(([,c])=>c>=3).map(([id])=>parseInt(id))),[wrongCounts]);
+  // Derived flat list of all collections (for exam launcher, visibleQuestions, etc.)
+  const collections = useMemo(()=>collectionSets.flatMap(s=>s.colls), [collectionSets]);
 
   // ── Persistence ──
   useEffect(()=>save('favs',Array.from(favIds)),[favIds]);
@@ -1631,7 +1666,7 @@ function App() {
   useEffect(()=>save('ctags',customTags),[customTags]);
   useEffect(()=>save('sr',srData),[srData]);
   useEffect(()=>save('wrong',wrongCounts),[wrongCounts]);
-  useEffect(()=>save('collections',collections),[collections]);
+  useEffect(()=>save('collectionSets',collectionSets),[collectionSets]);
   useEffect(()=>save('sessions',sessions),[sessions]);
   useEffect(()=>save('display',displaySettings),[displaySettings]);
   useEffect(()=>save('compact',compact),[compact]);
@@ -1686,13 +1721,51 @@ function App() {
   };
   const dismissToast = () => { clearTimeout(toastTimerRef.current); setToast(null); };
 
+  // ── Auto-generate system sets from loaded data ──
+  const PALETTE = ['#5b8dee','#3ecf8e','#f5a623','#f06058','#a78bfa','#38bdf8','#fbbf24',
+    '#34d399','#f472b6','#60a5fa','#4ade80','#fb923c','#e879f9','#22d3ee','#a3e635',
+    '#facc15','#f87171','#c084fc','#818cf8','#2dd4bf'];
+  const buildSystemSets = (qs, lessons) => {
+    // Set 1: per-lesson collections
+    let pi = 0;
+    const lessonColls = (lessons||[]).filter(l=>l&&l!=='General').map(l => ({
+      id: 'ls-' + l.slice(0,30).replace(/[^a-zA-Z0-9]/g,'_'),
+      name: l, color: PALETTE[pi++ % PALETTE.length],
+      qIds: qs.filter(q=>q.lesson===l).map(q=>q.id)
+    }));
+    const generalQs = qs.filter(q=>!q.lesson||q.lesson==='General');
+    if (generalQs.length) lessonColls.push({ id:'ls-General', name:'General', color:'#8892a4', qIds: generalQs.map(q=>q.id) });
+    // Set 2: numeric 10 chunks
+    const chunk = Math.ceil(qs.length/10);
+    const numericColls = Array.from({length:10},(_,i)=>{
+      const sl = qs.slice(i*chunk,(i+1)*chunk);
+      if(!sl.length) return null;
+      return { id:`num-${i}`, name:`Part ${i+1}`, color: PALETTE[(i*3+7)%PALETTE.length],
+        qIds: sl.map(q=>q.id) };
+    }).filter(Boolean);
+    return [
+      { id:'set-lessons', name:'By Lesson', type:'lesson', colls: lessonColls },
+      { id:'set-numeric', name:'By Part (10)', type:'numeric', colls: numericColls },
+    ];
+  };
+
   // ── File loading ──
   const loadFile = (fileName) => {
     setIsLoading(true); setFetchError(null);
     setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setCollapsedIds(new Set()); setActiveTab('All');
     fetch(fileName)
       .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
-      .then(text=>{ const {parsed,lessons}=parseTextData(text); setQuestions(parsed); setAvailableLessons(lessons); setIsLoading(false); showToast(`Loaded ${parsed.length} questions`); })
+      .then(text=>{
+          const {parsed,lessons}=parseTextData(text);
+          setQuestions(parsed); setAvailableLessons(lessons); setIsLoading(false);
+          const sys = buildSystemSets(parsed, lessons);
+          setCollectionSets(prev=>{
+            const user=prev.filter(s=>s.type==='user');
+            return [...sys,...(user.length?user:[{id:'set-user-1',name:'My Collections',type:'user',colls:[]}])];
+          });
+          setActiveSetId('set-lessons');
+          showToast(`Loaded ${parsed.length} questions`);
+        })
       .catch(err=>{ setFetchError(`Cannot load "${fileName}". ${err.message}`); setIsLoading(false); });
   };
 
@@ -1702,6 +1775,12 @@ function App() {
       const {parsed,lessons}=parseTextData(e.target.result);
       setQuestions(parsed); setAvailableLessons(lessons);
       setActiveFile(file.name); setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setCollapsedIds(new Set()); setActiveTab('All'); setFetchError(null);
+      const sys = buildSystemSets(parsed, lessons);
+      setCollectionSets(prev=>{
+        const user=prev.filter(s=>s.type==='user');
+        return [...sys,...(user.length?user:[{id:'set-user-1',name:'My Collections',type:'user',colls:[]}])];
+      });
+      setActiveSetId('set-lessons');
       showToast(`Loaded ${parsed.length} questions from "${file.name}"`);
     };
     reader.readAsText(file);
@@ -2013,6 +2092,154 @@ function App() {
     navigator.clipboard?.writeText(text).then(()=>showToast('Copied!'));
   };
 
+  const exportToDocx = async () => {
+    if (!visibleQuestions.length) return showToast('Nothing to export','warn');
+    showToast('Building DOCX...','success');
+    try {
+      // Dynamically import docx via CDN script (already loaded below)
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
+               BorderStyle, WidthType, ShadingType, Table, TableRow, TableCell,
+               LevelFormat, PageNumber } = window.docxLib;
+      const BLUE = '2E5FAD'; const GRAY = 'DDDDDD'; const LIGHT = 'F0F4FF';
+      const border = { style: BorderStyle.SINGLE, size: 1, color: GRAY };
+      const borders = { top:border, bottom:border, left:border, right:border };
+      const cellMargins = { top:80, bottom:80, left:120, right:120 };
+
+      const titleLabel = activeCollId
+        ? collections.find(c=>c.id===activeCollId)?.name
+        : activeTab==='SR Due'?'SR Due':'All Questions';
+
+      const children = [];
+
+      // Title
+      children.push(new Paragraph({
+        children:[new TextRun({text:`QnA Hub — ${titleLabel}`, bold:true, size:36, color:BLUE, font:'Arial'})],
+        spacing:{after:160}
+      }));
+      children.push(new Paragraph({
+        children:[new TextRun({text:`Exported: ${new Date().toLocaleDateString()} · ${visibleQuestions.length} questions`, size:20, color:'888888', font:'Arial'})],
+        spacing:{after:400}
+      }));
+
+      visibleQuestions.forEach((q, qi) => {
+        const isDone = completedIds.has(q.id);
+        const isWeak = weakIds.has(q.id);
+
+        // Question heading
+        children.push(new Paragraph({
+          children:[
+            new TextRun({text:`Q${q.id}. `, bold:true, size:26, color:BLUE, font:'Arial'}),
+            new TextRun({text:q.question, bold:true, size:26, font:'Arial',
+              color: isDone?'22AA66': isWeak?'DD4444':'000000'}),
+          ],
+          spacing:{before:240, after:100},
+          border:{ bottom:{style:BorderStyle.SINGLE, size:1, color:GRAY, space:4} }
+        }));
+
+        // Lesson label
+        if (q.lesson && q.lesson!=='General') {
+          children.push(new Paragraph({
+            children:[new TextRun({text:`📚 ${q.lesson}`, size:18, color:'666666', italics:true, font:'Arial'})],
+            spacing:{after:80}
+          }));
+        }
+
+        // Options as table
+        if (q.options && q.options.length > 0) {
+          const rows = q.options.map((opt, oi) => {
+            const letter = String.fromCharCode(65+oi);
+            const isCorrect = q.answerKey && q.answerKey.toUpperCase()===letter;
+            return new TableRow({ children:[
+              new TableCell({
+                borders, margins: cellMargins,
+                width:{size:800, type:WidthType.DXA},
+                shading: isCorrect?{fill:'D5F0E8',type:ShadingType.CLEAR}:{},
+                children:[new Paragraph({ children:[new TextRun({text:letter+')', bold:true, size:20, font:'Arial', color:isCorrect?'006644':'333333'})]})]
+              }),
+              new TableCell({
+                borders, margins: cellMargins,
+                width:{size:8560, type:WidthType.DXA},
+                shading: isCorrect?{fill:'D5F0E8',type:ShadingType.CLEAR}:{},
+                children:[new Paragraph({ children:[new TextRun({text:opt, size:20, font:'Arial', bold:isCorrect, color:isCorrect?'006644':'222222'})]})]
+              }),
+            ]});
+          });
+          children.push(new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[800,8560], rows, margins:{top:80,bottom:80} }));
+        }
+
+        // Answer
+        const answerLine = (q.answerKey?`${q.answerKey} — `:'') + (q.answerText||'');
+        if (answerLine.trim()) {
+          children.push(new Paragraph({
+            children:[
+              new TextRun({text:'✓ Answer: ', bold:true, size:20, color:'006644', font:'Arial'}),
+              new TextRun({text:answerLine, size:20, font:'Arial', color:'006644'}),
+            ],
+            spacing:{before:80, after:60},
+            indent:{left:240}
+          }));
+        }
+
+        // Explanation
+        if (q.explanation) {
+          children.push(new Paragraph({
+            children:[
+              new TextRun({text:'Explanation: ', bold:true, size:18, color:'555555', font:'Arial', italics:true}),
+              new TextRun({text:q.explanation, size:18, font:'Arial', color:'555555', italics:true}),
+            ],
+            spacing:{before:40, after:80},
+            indent:{left:240}
+          }));
+        }
+
+        // Tags / Notes
+        const tag = customTags[q.id]||q.tag;
+        if (tag) children.push(new Paragraph({
+          children:[new TextRun({text:`🏷 ${tag}`, size:17, color:'888888', font:'Arial'})],
+          indent:{left:240}, spacing:{after:40}
+        }));
+        if (notes[q.id]) children.push(new Paragraph({
+          children:[new TextRun({text:`📝 ${notes[q.id]}`, size:17, color:'AA8800', font:'Arial', italics:true})],
+          indent:{left:240}, spacing:{after:80}
+        }));
+
+        // Status badges
+        const badges = [];
+        if (isDone) badges.push('✓ Done');
+        if (isWeak) badges.push('⚡ Weak');
+        if (favIds.has(q.id)) badges.push('★ Fav');
+        if (badges.length) children.push(new Paragraph({
+          children:[new TextRun({text:badges.join('  '), size:16, color:'888888', font:'Arial'})],
+          indent:{left:240}, spacing:{after:120}
+        }));
+
+        // Separator
+        if (qi < visibleQuestions.length-1) {
+          children.push(new Paragraph({spacing:{before:80,after:80}}));
+        }
+      });
+
+      const doc = new Document({
+        styles:{default:{document:{run:{font:'Arial',size:22}}}},
+        sections:[{
+          properties:{ page:{ size:{width:12240,height:15840}, margin:{top:1080,right:1080,bottom:1080,left:1080} } },
+          children
+        }]
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url;
+      a.download = `QnA_${(titleLabel||'export').replace(/[^a-z0-9]/gi,'_')}.docx`;
+      a.click(); URL.revokeObjectURL(url);
+      showToast('DOCX exported! 📄');
+    } catch(err) {
+      console.error('DOCX error',err);
+      showToast('DOCX failed: '+err.message,'error');
+    }
+  };
+
   const exportToPDF = () => {
     if(!visibleQuestions.length) return showToast('Nothing to export','warn');
     setIsExporting(true); showToast('Generating PDF...');
@@ -2080,47 +2307,114 @@ function App() {
         </div>
       </div>
 
-      {/* ══ TABS + PROGRESS ══ */}
+      {/* ══ COLLECTION SETS PANEL ══ */}
       {questions.length>0&&(
-        <div style={{background:'var(--surface)',borderBottom:'1px solid var(--border)',padding:'0 20px',position:'sticky',top:58,zIndex:40}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,maxWidth:1200,margin:'0 auto',height:48}}>
-            <div style={{display:'flex',gap:3,overflowX:'auto',paddingBottom:2}}>
-              {TABS.map(tab=>(
-                <button key={tab.id} className={`tab-btn ${activeTab===tab.id?tab.cls||'active':''}`} onClick={()=>{setActiveTab(tab.id);setActiveCollId(null);}}>
-                  {tab.label}
-                  <span style={{fontFamily:'var(--mono)',fontSize:10,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>{tab.count}</span>
-                </button>
-              ))}
-              {/* Collection tabs with progress bar */}
-              {collections.map(c=>{
-                const done = c.qIds.filter(id=>completedIds.has(id)).length;
-                const total = c.qIds.length;
-                const pctColl = total>0 ? Math.round(done/total*100) : 0;
-                const isActive = activeTab==='Collection'&&activeCollId===c.id;
-                return (
-                  <button key={c.id} className={`tab-btn ${isActive?'active':''}`}
-                    onClick={()=>{setActiveTab('Collection');setActiveCollId(c.id);}}>
-                    <div style={{width:7,height:7,borderRadius:'50%',background:isActive?'#fff':c.color,flexShrink:0}}/>
-                    {c.name}
-                    {/* count + mini progress */}
-                    <div style={{display:'flex',alignItems:'center',gap:4}}>
-                      <span style={{fontFamily:'var(--mono)',fontSize:10,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>
-                        {done}/{total}
-                      </span>
-                      {total>0&&(
-                        <div className="coll-progress">
-                          <div className="coll-progress-fill" style={{width:`${pctColl}%`,background:isActive?'#fff':c.color}}/>
-                        </div>
+        <div className="set-panel">
+          <div style={{maxWidth:1200,margin:'0 auto'}}>
+
+            {/* ── System tabs row (All / SR Due / overall progress) ── */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid var(--border)',height:40,padding:'0 12px',gap:8}}>
+              <div style={{display:'flex',gap:3}}>
+                {TABS.map(tab=>(
+                  <button key={tab.id} className={`tab-btn ${activeTab===tab.id?tab.cls||'active':''}`}
+                    style={{padding:'4px 10px',fontSize:12}}
+                    onClick={()=>{setActiveTab(tab.id);setActiveCollId(null);}}>
+                    {tab.label}
+                    <span style={{fontFamily:'var(--mono)',fontSize:9,opacity:.8,background:'rgba(255,255,255,.15)',padding:'1px 5px',borderRadius:4}}>{tab.count}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+                <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--mono)'}}>{pct}%</span>
+                <div className="pb" style={{width:80}}><div className="pb-fill" style={{width:`${pct}%`,background:pct>=80?'var(--green)':'var(--primary)'}}/></div>
+              </div>
+            </div>
+
+            {/* ── Collection Sets: one row per set, only one expanded ── */}
+            {collectionSets.map(set=>{
+              const isOpen = activeSetId===set.id;
+              const typeIcon = set.type==='lesson'?'📚':set.type==='numeric'?'🔢':'📁';
+              const isUser = set.type==='user';
+              return (
+                <div key={set.id} className="set-row">
+                  {/* Set label / toggle */}
+                  <div className="set-label" style={{color:isOpen?'var(--primary)':'var(--muted)'}}
+                    onClick={()=>setActiveSetId(isOpen?'__none__':set.id)}>
+                    <span style={{fontSize:13}}>{typeIcon}</span>
+                    {/* Editable name for user sets */}
+                    {isUser ? (
+                      <input
+                        defaultValue={set.name}
+                        onBlur={e=>setCollectionSets(prev=>prev.map(s=>s.id!==set.id?s:{...s,name:e.target.value.trim()||s.name}))}
+                        onKeyDown={e=>{e.key==='Enter'&&e.target.blur(); e.stopPropagation();}}
+                        onClick={e=>e.stopPropagation()}
+                        style={{background:'none',border:'none',outline:'none',fontWeight:700,fontSize:11,
+                          color:'inherit',fontFamily:'var(--font)',textTransform:'uppercase',
+                          letterSpacing:'.07em',width:'80px',cursor:'text'}}
+                        title="Click to rename"/>
+                    ):(
+                      <span style={{fontWeight:700,fontSize:11,textTransform:'uppercase',letterSpacing:'.07em'}}>{set.name}</span>
+                    )}
+                    <span style={{fontSize:9,marginLeft:'auto'}}>{isOpen?'▲':'▼'}</span>
+                  </div>
+
+                  {/* Chip row — only when open */}
+                  {isOpen&&(
+                    <div className="set-chips">
+                      {set.colls.length===0&&(
+                        <span style={{fontSize:11,color:'var(--muted)',padding:'0 4px'}}>Empty — click ✎ to add collections</span>
+                      )}
+                      {set.colls.map(c=>{
+                        const done=c.qIds.filter(id=>completedIds.has(id)).length;
+                        const total=c.qIds.length;
+                        const pctC=total>0?Math.round(done/total*100):0;
+                        const isActive=activeTab==='Collection'&&activeCollId===c.id;
+                        return (
+                          <button key={c.id} className={`coll-chip${isActive?' active':''}`}
+                            style={{borderColor:isActive?c.color:'var(--border2)',
+                              background:isActive?c.color+'22':'var(--card2)',
+                              color:isActive?c.color:'var(--muted)'}}
+                            onClick={()=>{setActiveTab('Collection');setActiveCollId(c.id);}}>
+                            <div style={{width:6,height:6,borderRadius:'50%',background:c.color,flexShrink:0}}/>
+                            <span>{c.name}</span>
+                            <span style={{fontFamily:'var(--mono)',fontSize:9,opacity:.7}}>{done}/{total}</span>
+                            {total>0&&(
+                              <div className="coll-chip-prog">
+                                <div style={{height:'100%',background:c.color,width:`${pctC}%`,borderRadius:2,transition:'width .4s'}}/>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {!isOpen&&<div style={{flex:1}}/>}
+
+                  {/* Actions for user sets */}
+                  {isUser&&(
+                    <div className="set-actions">
+                      <button className="set-action-btn" onClick={()=>{setActiveSetId(set.id);setShowCollections(true);}}>✎ Edit</button>
+                      {collectionSets.filter(s=>s.type==='user').length<6&&(
+                        <button className="set-action-btn" title="Add new user set"
+                          onClick={()=>{
+                            const id='set-user-'+Date.now();
+                            setCollectionSets(prev=>[...prev,{id,name:'New Set',type:'user',colls:[]}]);
+                            setActiveSetId(id);
+                          }}>+ Set</button>
+                      )}
+                      {collectionSets.filter(s=>s.type==='user').length>1&&(
+                        <button className="set-action-btn" title="Delete this set"
+                          style={{color:'var(--red)'}}
+                          onClick={()=>{
+                            setCollectionSets(prev=>prev.filter(s=>s.id!==set.id));
+                            setActiveSetId(collectionSets.find(s=>s.type==='user'&&s.id!==set.id)?.id||'set-lessons');
+                          }}>✕</button>
                       )}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--mono)'}}>{pct}%</span>
-              <div className="pb" style={{width:80}}><div className="pb-fill" style={{width:`${pct}%`,background:pct>=80?'var(--green)':'var(--primary)'}}/></div>
-            </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -2211,6 +2505,7 @@ function App() {
             <div style={{display:'flex',gap:6}}>
               <button className="btn" onClick={exportToText} style={{fontSize:11}}><I.Copy/> Copy</button>
               <button className="btn" onClick={exportToPDF} disabled={isExporting} style={{fontSize:11}}>{isExporting?<I.Loader/>:<I.Download/>} PDF</button>
+              <button className="btn" onClick={exportToDocx} style={{fontSize:11}}>📄 DOCX</button>
             </div>
           </div>
         </div>
@@ -2377,7 +2672,19 @@ function App() {
         />
       )}
       {showShortcuts&&<ShortcutsPanel onClose={()=>setShowShortcuts(false)}/>}
-      {showCollections&&<CollectionsModal questions={questions} collections={collections} onSave={c=>{setCollections(c);setShowCollections(false);showToast('Collections saved');}} onClose={()=>setShowCollections(false)} pinnedIds={pinnedIds} favIds={favIds} completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts).map(Number))}/>}
+      {showCollections&&(()=>{
+        const userSets = collectionSets.filter(s=>s.type==='user');
+        const editSet = userSets.find(s=>s.id===activeSetId) || userSets[0];
+        if (!editSet) return null;
+        return <CollectionsModal
+          questions={questions} collections={editSet.colls} setName={editSet.name}
+          onSave={(newColls,newName)=>{
+            setCollectionSets(prev=>prev.map(s=>s.id!==editSet.id?s:{...s,colls:newColls,name:newName||s.name}));
+            setShowCollections(false); showToast('Collections saved');
+          }}
+          onClose={()=>setShowCollections(false)} pinnedIds={pinnedIds} favIds={favIds}
+          completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts).map(Number))}/>;
+      })()}
       {noteModal&&<NoteModal qId={noteModal.qId} question={noteModal.question} noteText={notes[noteModal.qId]||''} onSave={saveNote} onClose={()=>setNoteModal(null)}/>}
       {tagModal&&<TagEditModal qId={tagModal.qId} question={tagModal.question} currentTag={customTags[tagModal.qId]||''} onSave={saveCustomTag} onClose={()=>setTagModal(null)}/>}
 
