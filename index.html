@@ -139,8 +139,35 @@ const AVAILABLE_FILES = [
 const SK = "qna4_"; // storage key prefix
 
 // ═══════════════════════════════ STORAGE ═══════════════════════════════
-const save = (k, v) => { try { localStorage.setItem(SK+k, JSON.stringify(v)); } catch{} };
-const load = (k, fb) => { try { const r=localStorage.getItem(SK+k); return r!=null?JSON.parse(r):fb; } catch{ return fb; }};
+// fk = file key for per-file namespacing; omit for global settings
+const save = (k, v, fk) => {
+  try { localStorage.setItem(SK+(fk?fk+'__':'')+k, JSON.stringify(v)); } catch{}
+};
+const load = (k, fb, fk) => {
+  try {
+    const r = localStorage.getItem(SK+(fk?fk+'__':'')+k);
+    return r != null ? JSON.parse(r) : fb;
+  } catch { return fb; }
+};
+const clearFileData = (fk) => {
+  const prefix = SK + fk + '__';
+  Object.keys(localStorage).filter(k => k.startsWith(prefix)).forEach(k => localStorage.removeItem(k));
+};
+const clearAllQnaData = () => {
+  Object.keys(localStorage).filter(k => k.startsWith(SK)).forEach(k => localStorage.removeItem(k));
+};
+
+function fileKeyFrom(name) {
+  return (name||'file').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 24) || 'file';
+}
+
+// Get short display number from prefixed ID
+function qNum(id) {
+  if (!id) return '?';
+  if (typeof id === 'number') return id;
+  const parts = String(id).split('__');
+  return parts.length > 1 ? parts[parts.length-1] : id;
+}
 
 // ═══════════════════════════════ SM-2 ═══════════════════════════════
 // quality: 0=Again, 1=Hard, 2=Good, 3=Easy
@@ -178,9 +205,10 @@ const THEMES = [
 ];
 
 // ═══════════════════════════════ PARSER ═══════════════════════════════
-function parseTextData(text) {
+function parseTextData(text, fileKey) {
+  const fk = fileKey || 'file';
   const lines = text.split('\n');
-  const parsed = []; let id = 1;
+  const parsed = []; let seq = 1;
   const lessons = new Set();
   let sep = '\t';
   const sm = text.match(/#separator:(.+)/);
@@ -217,7 +245,7 @@ function parseTextData(text) {
       else explanation=cols[cols.length-1]?cols[cols.length-1].trim():'';
     }
     if (!qText) continue;
-    parsed.push({ id:id++, lesson, question:qText, options, answerKey, answerText, explanation, tag });
+    parsed.push({ id:`${fk}__${seq++}`, numId:seq-1, fileKey:fk, lesson, question:qText, options, answerKey, answerText, explanation, tag });
   }
   return { parsed, lessons: Array.from(lessons) };
 }
@@ -383,7 +411,7 @@ function resolveAtom(q, questions) {
   // ── ID list: "44, 45, 100" ──
   if (/^[\d\s,]+$/.test(q)) {
     const ids = q.split(/[\s,]+/).map(Number).filter(Boolean);
-    questions.forEach(qq => { if (ids.includes(qq.id)) matched.add(qq.id); });
+    questions.forEach(qq => { const n = typeof qq.id==='string' ? (qq.numId||parseInt(qq.id.split('__')[1]||qq.id)) : qq.id; if (ids.includes(n)||ids.includes(qq.id)) matched.add(qq.id); });
     return matched;
   }
 
@@ -1291,7 +1319,7 @@ const QuestionCard = memo(function QuestionCard({
   const [copied, setCopied] = useState(false);
 
   const copyCard = () => {
-    let t = `Q${q.id}: ${q.question}\n`;
+    let t = `Q${qNum(q.id)}: ${q.question}\n`;
     if (showOpts && q.options && q.options.length>0)
       q.options.forEach((o,i) => { t += `  ${String.fromCharCode(65+i)}) ${o}\n`; });
     if (showAns) t += `  ✓ ${q.answerKey?q.answerKey+' — ':''}${q.answerText}\n`;
@@ -1584,6 +1612,8 @@ function ExamLauncher({ questions, collections, completedIds, wrongCounts, onSta
 function App() {
   // File & data
   const [activeFile, setActiveFile] = useState(AVAILABLE_FILES[0]||'');
+  // fileKey is the namespacing key for all per-file stored data
+  const [fileKey, setFileKey] = useState(()=>fileKeyFrom(AVAILABLE_FILES[0]||'file'));
   const [questions, setQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
@@ -1591,22 +1621,24 @@ function App() {
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Interaction state (all persisted)
-  const [favIds, setFavIds] = useState(()=>new Set(load('favs',[])));
-  const [completedIds, setCompletedIds] = useState(()=>new Set(load('done',[])));
-  const [pinnedIds, setPinnedIds] = useState(()=>new Set(load('pins',[])));
-  const [notes, setNotes] = useState(()=>load('notes',{}));
-  const [customTags, setCustomTags] = useState(()=>load('ctags',{})); // {qId: tag}
-  const [srData, setSrData] = useState(()=>load('sr',{})); // {qId: {interval,easeFactor,repetitions,nextDue}}
-  const [wrongCounts, setWrongCounts] = useState(()=>load('wrong',{})); // {qId: count}
+  // Per-file state — all keyed by fileKey so different files don't collide
+  const initFk = fileKeyFrom(AVAILABLE_FILES[0]||'file');
+  const [favIds, setFavIds] = useState(()=>new Set(load('favs',[],initFk)));
+  const [completedIds, setCompletedIds] = useState(()=>new Set(load('done',[],initFk)));
+  const [pinnedIds, setPinnedIds] = useState(()=>new Set(load('pins',[],initFk)));
+  const [notes, setNotes] = useState(()=>load('notes',{},initFk));
+  const [customTags, setCustomTags] = useState(()=>load('ctags',{},initFk)); // {qId: tag}
+  const [srData, setSrData] = useState(()=>load('sr',{},initFk)); // {qId: {interval,easeFactor,repetitions,nextDue}}
+  const [wrongCounts, setWrongCounts] = useState(()=>load('wrong',{},initFk)); // {qId: count}
   // collectionSets: [{id, name, type:'lesson'|'numeric'|'user', colls:[{id,name,color,qIds}]}]
   const [collectionSets, setCollectionSets] = useState(() => {
-    const saved = load('collectionSets', null);
+    const saved = load('collectionSets', null, initFk);
     if (saved) return saved;
-    const old = load('collections', []); // migrate legacy flat array
+    const old = load('collections', [], initFk); // migrate legacy flat array
     return [{ id:'set-user-1', name:'My Collections', type:'user', colls: old }];
   });
   const [activeSetId, setActiveSetId] = useState(() => {
-    const saved = load('collectionSets', null);
+    const saved = load('collectionSets', null, initFk);
     return saved && saved.length ? saved[0].id : 'set-user-1';
   });
   const [sessions, setSessions] = useState(()=>load('sessions',[]));
@@ -1654,19 +1686,19 @@ function App() {
   const searchDebRef = useRef(null);
 
   // Weak spots: wrong ≥ 3
-  const weakIds = useMemo(()=>new Set(Object.entries(wrongCounts).filter(([,c])=>c>=3).map(([id])=>parseInt(id))),[wrongCounts]);
+  const weakIds = useMemo(()=>new Set(Object.entries(wrongCounts).filter(([,c])=>c>=3).map(([id])=>id)),[wrongCounts]);
   // Derived flat list of all collections (for exam launcher, visibleQuestions, etc.)
   const collections = useMemo(()=>collectionSets.flatMap(s=>s.colls), [collectionSets]);
 
   // ── Persistence ──
-  useEffect(()=>save('favs',Array.from(favIds)),[favIds]);
-  useEffect(()=>save('done',Array.from(completedIds)),[completedIds]);
-  useEffect(()=>save('pins',Array.from(pinnedIds)),[pinnedIds]);
-  useEffect(()=>save('notes',notes),[notes]);
-  useEffect(()=>save('ctags',customTags),[customTags]);
-  useEffect(()=>save('sr',srData),[srData]);
-  useEffect(()=>save('wrong',wrongCounts),[wrongCounts]);
-  useEffect(()=>save('collectionSets',collectionSets),[collectionSets]);
+  useEffect(()=>save('favs',Array.from(favIds),fileKey),[favIds,fileKey]);
+  useEffect(()=>save('done',Array.from(completedIds),fileKey),[completedIds,fileKey]);
+  useEffect(()=>save('pins',Array.from(pinnedIds),fileKey),[pinnedIds,fileKey]);
+  useEffect(()=>save('notes',notes,fileKey),[notes,fileKey]);
+  useEffect(()=>save('ctags',customTags,fileKey),[customTags,fileKey]);
+  useEffect(()=>save('sr',srData,fileKey),[srData,fileKey]);
+  useEffect(()=>save('wrong',wrongCounts,fileKey),[wrongCounts,fileKey]);
+  useEffect(()=>save('collectionSets',collectionSets,fileKey),[collectionSets,fileKey]);
   useEffect(()=>save('sessions',sessions),[sessions]);
   useEffect(()=>save('display',displaySettings),[displaySettings]);
   useEffect(()=>save('compact',compact),[compact]);
@@ -1721,6 +1753,36 @@ function App() {
   };
   const dismissToast = () => { clearTimeout(toastTimerRef.current); setToast(null); };
 
+  // ── Reset helpers ──
+  const resetFileData = () => {
+    if (!fileKey) return;
+    clearFileData(fileKey);
+    setFavIds(new Set()); setCompletedIds(new Set()); setPinnedIds(new Set());
+    setNotes({}); setCustomTags({}); setSrData({}); setWrongCounts({});
+    setCollapsedIds(new Set()); setLocalAnsOverrides({}); setLocalOptOverrides({}); setLocalExpOverrides({});
+    // Rebuild sets from scratch
+    const sys = buildSystemSets(questions, availableLessons);
+    setCollectionSets([...sys, {id:'set-user-1',name:'My Collections',type:'user',colls:[]}]);
+    setActiveSetId('set-lessons');
+    showToast('🗑 File data reset', 'warn');
+  };
+
+  const resetAllData = () => {
+    clearAllQnaData();
+    setFavIds(new Set()); setCompletedIds(new Set()); setPinnedIds(new Set());
+    setNotes({}); setCustomTags({}); setSrData({}); setWrongCounts({});
+    setCollapsedIds(new Set()); setLocalAnsOverrides({}); setLocalOptOverrides({}); setLocalExpOverrides({});
+    setSessions([]); setStreak(0);
+    if (questions.length) {
+      const sys = buildSystemSets(questions, availableLessons);
+      setCollectionSets([...sys, {id:'set-user-1',name:'My Collections',type:'user',colls:[]}]);
+    } else {
+      setCollectionSets([{id:'set-user-1',name:'My Collections',type:'user',colls:[]}]);
+    }
+    setActiveSetId(questions.length ? 'set-lessons' : 'set-user-1');
+    showToast('🗑 All data reset', 'warn');
+  };
+
   // ── Auto-generate system sets from loaded data ──
   const PALETTE = ['#5b8dee','#3ecf8e','#f5a623','#f06058','#a78bfa','#38bdf8','#fbbf24',
     '#34d399','#f472b6','#60a5fa','#4ade80','#fb923c','#e879f9','#22d3ee','#a3e635',
@@ -1756,13 +1818,23 @@ function App() {
     fetch(fileName)
       .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
       .then(text=>{
-          const {parsed,lessons}=parseTextData(text);
+          const fk = fileKeyFrom(fileName);
+          setFileKey(fk);
+          const {parsed,lessons}=parseTextData(text, fk);
           setQuestions(parsed); setAvailableLessons(lessons); setIsLoading(false);
+          // Load this file's per-file data from storage
+          setFavIds(new Set(load('favs',[],fk)));
+          setCompletedIds(new Set(load('done',[],fk)));
+          setPinnedIds(new Set(load('pins',[],fk)));
+          setNotes(load('notes',{},fk));
+          setCustomTags(load('ctags',{},fk));
+          setSrData(load('sr',{},fk));
+          setWrongCounts(load('wrong',{},fk));
+          const savedSets = load('collectionSets',null,fk);
+          const userSets = savedSets ? savedSets.filter(s=>s.type==='user')
+            : [{id:'set-user-1',name:'My Collections',type:'user',colls:[]}];
           const sys = buildSystemSets(parsed, lessons);
-          setCollectionSets(prev=>{
-            const user=prev.filter(s=>s.type==='user');
-            return [...sys,...(user.length?user:[{id:'set-user-1',name:'My Collections',type:'user',colls:[]}])];
-          });
+          setCollectionSets([...sys, ...userSets]);
           setActiveSetId('set-lessons');
           showToast(`Loaded ${parsed.length} questions`);
         })
@@ -1772,14 +1844,24 @@ function App() {
   const handleFileUpload = (file) => {
     const reader = new FileReader();
     reader.onload = e => {
-      const {parsed,lessons}=parseTextData(e.target.result);
+      const fk = fileKeyFrom(file.name);
+      setFileKey(fk);
+      const {parsed,lessons}=parseTextData(e.target.result, fk);
       setQuestions(parsed); setAvailableLessons(lessons);
       setActiveFile(file.name); setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setCollapsedIds(new Set()); setActiveTab('All'); setFetchError(null);
+      // Load this file's per-file data
+      setFavIds(new Set(load('favs',[],fk)));
+      setCompletedIds(new Set(load('done',[],fk)));
+      setPinnedIds(new Set(load('pins',[],fk)));
+      setNotes(load('notes',{},fk));
+      setCustomTags(load('ctags',{},fk));
+      setSrData(load('sr',{},fk));
+      setWrongCounts(load('wrong',{},fk));
+      const savedSets = load('collectionSets',null,fk);
+      const userSets = savedSets ? savedSets.filter(s=>s.type==='user')
+        : [{id:'set-user-1',name:'My Collections',type:'user',colls:[]}];
       const sys = buildSystemSets(parsed, lessons);
-      setCollectionSets(prev=>{
-        const user=prev.filter(s=>s.type==='user');
-        return [...sys,...(user.length?user:[{id:'set-user-1',name:'My Collections',type:'user',colls:[]}])];
-      });
+      setCollectionSets([...sys, ...userSets]);
       setActiveSetId('set-lessons');
       showToast(`Loaded ${parsed.length} questions from "${file.name}"`);
     };
@@ -2081,7 +2163,7 @@ function App() {
     if (!visibleQuestions.length) return showToast('Nothing to export','warn');
     let text=`QnA Hub Export\n${'='.repeat(50)}\n\n`;
     visibleQuestions.forEach(q=>{
-      text+=`[ID: ${q.id}] ${q.lesson!=='General'?'['+q.lesson+']':''}\n${q.question}\n`;
+      text+=`[ID: ${qNum(q.id)}] ${q.lesson!=='General'?'['+q.lesson+']':''}\n${q.question}\n`;
       if(displaySettings.showOptions&&q.options.length>0) q.options.forEach((o,i)=>{text+=`  ${String.fromCharCode(65+i)}) ${o}\n`;});
       if(displaySettings.showAnswer) text+=`  ✓ ${q.answerKey?q.answerKey+' — ':''}${q.answerText}\n`;
       if(displaySettings.showExplanation&&q.explanation) text+=`  📖 ${q.explanation}\n`;
@@ -2515,6 +2597,18 @@ function App() {
               <button className="btn" onClick={exportToText} style={{fontSize:11}}><I.Copy/> Copy</button>
               <button className="btn" onClick={exportToPDF} disabled={isExporting} style={{fontSize:11}}>{isExporting?<I.Loader/>:<I.Download/>} PDF</button>
               <button className="btn" onClick={exportToDocx} style={{fontSize:11}}>📄 DOCX</button>
+              {/* Reset buttons */}
+              <div style={{width:1,height:20,background:'var(--border2)',margin:'0 2px'}}/>
+              <button className="btn" onClick={()=>{if(confirm(`Reset all progress for "${activeFile||'this file'}"?\nThis clears done, favorites, notes, wrong counts, and collections for this file only.`))resetFileData();}}
+                style={{fontSize:11,color:'var(--yellow)',borderColor:'var(--yellow)',opacity:.8}}
+                title="Reset progress for current file only">
+                ↺ File
+              </button>
+              <button className="btn" onClick={()=>{if(confirm('Reset ALL data for ALL files?\nThis cannot be undone.'))resetAllData();}}
+                style={{fontSize:11,color:'var(--red)',borderColor:'var(--red)',opacity:.8}}
+                title="Reset everything — all files, all progress">
+                🗑 All
+              </button>
             </div>
           </div>
         </div>
@@ -2574,7 +2668,7 @@ function App() {
                 )}
               </span>
               {dSearch&&<span>for "<b style={{color:'var(--text)'}}>{dSearch}</b>"</span>}
-              {focusedIdx>=0&&visibleQuestions[focusedIdx]&&<span style={{color:'var(--primary)'}}>focused: Q{visibleQuestions[focusedIdx].id} (J/K to navigate)</span>}
+              {focusedIdx>=0&&visibleQuestions[focusedIdx]&&<span style={{color:'var(--primary)'}}>focused: Q{qNum(visibleQuestions[focusedIdx].id)} (J/K to navigate)</span>}
             </div>
 
             {visibleQuestions.length===0?(
@@ -2692,7 +2786,7 @@ function App() {
             setShowCollections(false); showToast('Collections saved');
           }}
           onClose={()=>setShowCollections(false)} pinnedIds={pinnedIds} favIds={favIds}
-          completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts).map(Number))}/>;
+          completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts))}/>;
       })()}
       {noteModal&&<NoteModal qId={noteModal.qId} question={noteModal.question} noteText={notes[noteModal.qId]||''} onSave={saveNote} onClose={()=>setNoteModal(null)}/>}
       {tagModal&&<TagEditModal qId={tagModal.qId} question={tagModal.question} currentTag={customTags[tagModal.qId]||''} onSave={saveCustomTag} onClose={()=>setTagModal(null)}/>}
@@ -2719,5 +2813,3 @@ root.render(<App/>);
 </script>
 </body>
 </html>
-
-
