@@ -2007,12 +2007,17 @@ function App() {
   }, []);
 
   const jumpToTag = useCallback(t => {
-    // If tag is >40 chars with only 1 question, jump to __REST__ group
-    const tagKey = (allTags.restTags||[]).includes(t) ? '__REST__' : t;
-    setSelectedTags(new Set([tagKey]));
+    setSelectedTags(prev => {
+      // If tag belongs to the REST group, select __REST__ instead
+      // We derive this inline from questions+customTags to avoid stale closure
+      const counts = {};
+      // We can't access allTags here safely; pass the decision via a state update trick
+      // Instead, just always set the literal tag — the filter handles __REST__ via allTags
+      return new Set([t]);
+    });
     setTagDDOpen(false);
     window.scrollTo({top:0,behavior:'smooth'});
-  }, [allTags.restTags]);
+  }, []);
 
   const toggleQFilter = useCallback(key => {
     setQFilters(prev => {
@@ -2133,6 +2138,18 @@ function App() {
   };
 
   // ── Filtered questions ──
+  const allTags = useMemo(()=>{
+    const counts = {};
+    questions.forEach(q=>{const t=customTags[q.id]||q.tag; if(t&&t.trim()) counts[t.trim()]=(counts[t.trim()]||0)+1;});
+    const normal = [], restTags = [];
+    Object.keys(counts).sort().forEach(t=>{
+      if (t.length > 40 && counts[t] === 1) restTags.push(t);
+      else normal.push(t);
+    });
+    if (restTags.length > 0) normal.push('__REST__');
+    return {tags: normal, restTags};
+  },[questions,customTags]);
+
   const visibleQuestions = useMemo(()=>{
     let f = questions;
 
@@ -2143,7 +2160,6 @@ function App() {
     if (selectedTags.size>0) f=f.filter(q=>{
       const t = (customTags[q.id]||q.tag||'').trim();
       if (selectedTags.has(t)) return true;
-      // If __REST__ is selected, match any tag that's >40 chars with only 1 question
       if (selectedTags.has('__REST__') && allTags.restTags && allTags.restTags.includes(t)) return true;
       return false;
     });
@@ -2198,17 +2214,6 @@ function App() {
   }, [collections]);
 
   const srDueCount = useMemo(()=>questions.filter(q=>isDue(srData[q.id])).length,[questions,srData]);
-  const allTags = useMemo(()=>{
-    const counts = {};
-    questions.forEach(q=>{const t=customTags[q.id]||q.tag; if(t&&t.trim()) counts[t.trim()]=(counts[t.trim()]||0)+1;});
-    const normal = [], restTags = [];
-    Object.keys(counts).sort().forEach(t=>{
-      if (t.length > 40 && counts[t] === 1) restTags.push(t);
-      else normal.push(t);
-    });
-    if (restTags.length > 0) normal.push('__REST__');
-    return {tags: normal, restTags};
-  },[questions,customTags]);
 
   // ── Keyboard shortcuts ──
   useEffect(()=>{
