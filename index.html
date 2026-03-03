@@ -329,7 +329,7 @@ function ShortcutsPanel({ onClose }) {
       ['Ctrl+R', 'Open report'],
       ['Ctrl+P', 'Start practice mode'],
       ['Ctrl+E', 'Open exam launcher (with options)'],
-      ['Ctrl+A', 'Reveal/hide ALL answers (clears per-card overrides)'],
+      ['A', 'Reveal/hide ALL answers (clears per-card overrides)'],
       ['Ctrl+Z', 'Undo last Done/Weak action (while toast is visible)'],
       ['Ctrl+/', 'Toggle compact mode'],
       ['T', 'Cycle theme'],
@@ -1468,7 +1468,80 @@ const QuestionCard = memo(function QuestionCard({
 
 
 
-// ═══════════════════════════════ EXAM LAUNCHER ═══════════════════════════════
+// ═══════════════════════════════ TAG FILTER PANEL ═══════════════════════════════
+const TAG_ROW_LIMIT = 10; // max tags shown per row before collapsing
+
+function TagFilterPanel({ allTags, selectedTags, onToggle, onClear, questions, customTags }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Count questions per tag
+  const tagCounts = useMemo(()=>{
+    const m = {};
+    questions.forEach(q=>{
+      const t = customTags[q.id]||q.tag;
+      if (t&&t.trim()) m[t.trim()]=(m[t.trim()]||0)+1;
+    });
+    return m;
+  },[questions,customTags]);
+
+  const visibleTags = expanded ? allTags : allTags.slice(0, TAG_ROW_LIMIT);
+  const hasMore = allTags.length > TAG_ROW_LIMIT;
+
+  return (
+    <div style={{
+      position:'absolute',top:'calc(100% + 6px)',left:0,minWidth:320,maxWidth:420,
+      background:'var(--card)',border:'1px solid var(--border2)',borderRadius:'var(--r)',
+      boxShadow:'var(--shadowl)',zIndex:100,animation:'fadeUp .15s ease-out',padding:'10px 12px'
+    }}>
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,borderBottom:'1px solid var(--border)',paddingBottom:6}}>
+        <span style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em'}}>
+          Filter by Tag
+          {selectedTags.size>0&&<span style={{color:'var(--primary)',marginLeft:6}}>{selectedTags.size} active</span>}
+        </span>
+        {selectedTags.size>0&&(
+          <button onClick={onClear} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,fontWeight:700,color:'var(--red)',fontFamily:'var(--font)',padding:0}}>✕ Clear</button>
+        )}
+      </div>
+
+      {/* Tag chips */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+        {visibleTags.map(t=>{
+          const active = selectedTags.has(t);
+          const cnt = tagCounts[t]||0;
+          return (
+            <button key={t} onClick={()=>onToggle(t)}
+              style={{
+                display:'inline-flex',alignItems:'center',gap:4,padding:'4px 9px',borderRadius:20,
+                fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap',
+                border:`1px solid ${active?'var(--primary)':'var(--border2)'}`,
+                background:active?'var(--pg)':'var(--card2)',
+                color:active?'var(--primary)':'var(--muted)',
+                transition:'all .12s',fontFamily:'var(--font)'
+              }}>
+              <I.Tag/>
+              {t}
+              <span style={{opacity:.6,fontSize:9,fontFamily:'var(--mono)'}}>{cnt}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Show more / less */}
+      {hasMore&&(
+        <button onClick={()=>setExpanded(v=>!v)}
+          style={{marginTop:8,width:'100%',background:'none',border:'1px solid var(--border)',borderRadius:6,
+            cursor:'pointer',color:'var(--muted)',fontSize:11,fontWeight:600,padding:'4px 0',fontFamily:'var(--font)',
+            transition:'border-color .15s'}}
+          onMouseEnter={e=>e.target.style.borderColor='var(--primary)'}
+          onMouseLeave={e=>e.target.style.borderColor='var(--border)'}
+        >
+          {expanded?`▲ Show less`:`▼ Show all ${allTags.length} tags`}
+        </button>
+      )}
+    </div>
+  );
+}
 function ExamLauncher({ questions, collections, completedIds, wrongCounts, onStart, onClose }) {
   const [excludeSolved, setExcludeSolved] = useState(true);
   const [scopeMode, setScopeMode] = useState('all'); // 'all' | 'collection' | 'weak'
@@ -1652,7 +1725,9 @@ function App() {
   const [activeCollId, setActiveCollId] = useState(null);
   const [qFilters, setQFilters] = useState(new Set(['unsolved'])); // multi-select: 'done'|'unsolved'|'fav'|'weak'|'all'
   const [selectedLessons, setSelectedLessons] = useState(new Set());
+  const [selectedTags, setSelectedTags] = useState(new Set());
   const [lessonDDOpen, setLessonDDOpen] = useState(false);
+  const [tagDDOpen, setTagDDOpen] = useState(false);
   const [displaySettings, setDisplaySettings] = useState(()=>load('display',{showOptions:true,showAnswer:true,showExplanation:true,showTags:true}));
   const [compact, setCompact] = useState(()=>load('compact',false));
   const [theme, setTheme] = useState(()=>load('theme','dark'));
@@ -1814,7 +1889,7 @@ function App() {
   // ── File loading ──
   const loadFile = (fileName) => {
     setIsLoading(true); setFetchError(null);
-    setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setCollapsedIds(new Set()); setActiveTab('All');
+    setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setSelectedTags(new Set()); setCollapsedIds(new Set()); setActiveTab('All');
     fetch(fileName)
       .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
       .then(text=>{
@@ -1848,7 +1923,7 @@ function App() {
       setFileKey(fk);
       const {parsed,lessons}=parseTextData(e.target.result, fk);
       setQuestions(parsed); setAvailableLessons(lessons);
-      setActiveFile(file.name); setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setCollapsedIds(new Set()); setActiveTab('All'); setFetchError(null);
+      setActiveFile(file.name); setSearchQuery(''); setDSearch(''); setSelectedLessons(new Set()); setSelectedTags(new Set()); setCollapsedIds(new Set()); setActiveTab('All'); setFetchError(null);
       // Load this file's per-file data
       setFavIds(new Set(load('favs',[],fk)));
       setCompletedIds(new Set(load('done',[],fk)));
@@ -1897,6 +1972,10 @@ function App() {
   }, [questions]);
   const toggleLesson = useCallback(l => {
     setSelectedLessons(prev=>{ const n=new Set(prev); n.has(l)?n.delete(l):n.add(l); return n; });
+  }, []);
+
+  const toggleTag = useCallback(t => {
+    setSelectedTags(prev=>{ const n=new Set(prev); n.has(t)?n.delete(t):n.add(t); return n; });
   }, []);
 
   const toggleQFilter = useCallback(key => {
@@ -2025,6 +2104,10 @@ function App() {
     f = [...f.filter(q=>pinnedIds.has(q.id)), ...f.filter(q=>!pinnedIds.has(q.id))];
 
     if (selectedLessons.size>0) f=f.filter(q=>selectedLessons.has(q.lesson));
+    if (selectedTags.size>0) f=f.filter(q=>{
+      const t = customTags[q.id]||q.tag||'';
+      return selectedTags.has(t);
+    });
 
     const q=dSearch.trim();
     if (q) {
@@ -2059,7 +2142,7 @@ function App() {
     }
 
     return f;
-  },[questions,dSearch,activeTab,activeCollId,favIds,completedIds,pinnedIds,selectedLessons,srData,weakIds,collections,customTags,qFilters]);
+  },[questions,dSearch,activeTab,activeCollId,favIds,completedIds,pinnedIds,selectedLessons,selectedTags,srData,weakIds,collections,customTags,qFilters]);
 
   const pct = questions.length>0?Math.round((completedIds.size/questions.length)*100):0;
 
@@ -2076,6 +2159,11 @@ function App() {
   }, [collections]);
 
   const srDueCount = useMemo(()=>questions.filter(q=>isDue(srData[q.id])).length,[questions,srData]);
+  const allTags = useMemo(()=>{
+    const s = new Set();
+    questions.forEach(q=>{const t=customTags[q.id]||q.tag; if(t&&t.trim()) s.add(t.trim());});
+    return Array.from(s).sort();
+  },[questions,customTags]);
 
   // ── Keyboard shortcuts ──
   useEffect(()=>{
@@ -2102,16 +2190,17 @@ function App() {
         if (e.key==='p'||e.key==='P') { e.preventDefault(); setPracticeMode('practice'); setShowPractice(true); return; }
         if (e.key==='e'||e.key==='E') { e.preventDefault(); setShowExamLauncher(true); return; }
         if (e.key==='/') { e.preventDefault(); setCompact(v=>!v); return; }
-        if (e.key==='a'||e.key==='A') {
-          e.preventDefault();
-          // Ctrl+A: always toggle global answers and clear all per-card overrides
-          setLocalAnsOverrides({});
-          setDisplaySettings(p=>({...p,showAnswer:!p.showAnswer}));
-          return;
-        }
       }
 
       if (inInput) return;
+
+      // A: toggle global answers and clear all per-card overrides
+      if (e.key==='a'||e.key==='A') {
+        e.preventDefault();
+        setLocalAnsOverrides({});
+        setDisplaySettings(p=>({...p,showAnswer:!p.showAnswer}));
+        return;
+      }
 
       // Double-G to top
       const now=Date.now();
@@ -2517,7 +2606,7 @@ function App() {
 
             {/* Lesson filter */}
             <div style={{position:'relative'}}>
-              <button className="btn" onClick={()=>setLessonDDOpen(v=>!v)}>
+              <button className="btn" onClick={()=>{setLessonDDOpen(v=>!v);setTagDDOpen(false);}}>
                 <I.Filter/>{selectedLessons.size===0?'All Lessons':`${selectedLessons.size} lesson(s)`}<I.Cd/>
               </button>
               {lessonDDOpen&&(
@@ -2532,6 +2621,25 @@ function App() {
                 </div>
               )}
             </div>
+
+            {/* Tag filter */}
+            {allTags.length>0&&(
+              <div style={{position:'relative'}}>
+                <button className="btn" onClick={()=>{setTagDDOpen(v=>!v);setLessonDDOpen(false);}}>
+                  <I.Tag/>{selectedTags.size===0?'All Tags':`${selectedTags.size} tag(s)`}<I.Cd/>
+                </button>
+                {tagDDOpen&&(
+                  <TagFilterPanel
+                    allTags={allTags}
+                    selectedTags={selectedTags}
+                    onToggle={toggleTag}
+                    onClear={()=>{setSelectedTags(new Set());setTagDDOpen(false);}}
+                    questions={questions}
+                    customTags={customTags}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Quick filter chips */}
             <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
@@ -2803,7 +2911,7 @@ function App() {
       )}
 
       {/* Close dropdowns on outside click */}
-      {lessonDDOpen&&<div style={{position:'fixed',inset:0,zIndex:50}} onClick={()=>setLessonDDOpen(false)}/>}
+      {(lessonDDOpen||tagDDOpen)&&<div style={{position:'fixed',inset:0,zIndex:50}} onClick={()=>{setLessonDDOpen(false);setTagDDOpen(false);}}/>}
     </div>
   );
 }
@@ -2813,7 +2921,3 @@ root.render(<App/>);
 </script>
 </body>
 </html>
-
-
-
-
