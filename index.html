@@ -88,7 +88,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .toast-x{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.6);padding:0;font-size:16px;line-height:1;margin-left:auto;transition:color .15s}
 .toast-x:hover{color:#fff}
 .bulk-sel{outline:2px solid var(--primary)!important;outline-offset:2px}
-.bulk-bar{position:sticky;top:66px;z-index:45;border-radius:10px;background:var(--primary);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 4px 20px var(--pg);animation:fadeUp .2s ease-out;margin-bottom:10px}
+.bulk-bar{position:sticky;top:110px;z-index:45;border-radius:10px;background:var(--primary);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 4px 20px var(--pg);animation:fadeUp .2s ease-out;margin-bottom:10px}
 .bulk-bar button{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s}
 .bulk-bar button:hover{background:rgba(255,255,255,.3)}
 .bulk-bar button:disabled{opacity:.35;cursor:not-allowed}
@@ -112,31 +112,6 @@ table.rt tr:last-child td{border-bottom:none}
 mark{background:var(--pg);color:var(--primary);border-radius:3px;padding:0 2px;font-weight:700}
 .shimmer{background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);background-size:200% auto;animation:shimmer 1.5s linear infinite;border-radius:6px}
 .kbd{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:4px;background:var(--card2);border:1px solid var(--border2);font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);min-width:20px}
-/* Floating toolbar */
-.float-bar{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:48;
-  background:var(--surface);border:1px solid var(--border2);border-radius:40px;
-  box-shadow:0 4px 24px rgba(0,0,0,.35);padding:5px 10px;
-  display:flex;align-items:center;gap:4px;flex-wrap:nowrap;
-  transition:opacity .2s,transform .2s;
-  max-width:calc(100vw - 32px);overflow-x:auto;
-}
-.float-bar::-webkit-scrollbar{height:0}
-.float-bar.hidden{opacity:0;transform:translateX(-50%) translateY(-10px);pointer-events:none}
-.float-sep{width:1px;height:18px;background:var(--border2);flex-shrink:0;margin:0 2px}
-.float-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:20px;
-  font-size:11px;font-weight:600;cursor:pointer;border:1px solid transparent;
-  background:transparent;color:var(--muted);transition:all .15s;white-space:nowrap;
-  font-family:var(--font);flex-shrink:0}
-.float-btn:hover{background:var(--card2);color:var(--text);border-color:var(--border2)}
-.float-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
-.float-btn.on-g{background:var(--green);color:#fff;border-color:var(--green)}
-.float-btn.on-y{background:var(--yellow);color:#fff;border-color:var(--yellow)}
-.float-btn.on-p{background:var(--purple);color:#fff;border-color:var(--purple)}
-.float-btn.on-m{background:var(--card2);color:var(--text);border-color:var(--border2)}
-.float-dd{position:fixed;top:112px;background:var(--card);border:1px solid var(--border2);
-  border-radius:var(--r);box-shadow:var(--shadowl);z-index:200;animation:fadeUp .15s ease-out;
-  max-height:320px;overflow-y:auto;min-width:260px}
-
 #read-rail{position:fixed;right:0;top:0;width:4px;height:100vh;background:var(--border);z-index:999;pointer-events:none}
 #read-fill{width:100%;background:var(--primary);transition:height .1s linear;border-radius:2px}
 /* Streak heatmap */
@@ -1783,10 +1758,6 @@ function App() {
   const [selectedTags, setSelectedTags] = useState(new Set());
   const [lessonDDOpen, setLessonDDOpen] = useState(false);
   const [tagDDOpen, setTagDDOpen] = useState(false);
-  const [floatLessonOpen, setFloatLessonOpen] = useState(false);
-  const [floatTagOpen, setFloatTagOpen] = useState(false);
-  const [toolbarVisible, setToolbarVisible] = useState(false);
-  const toolbarRef = useRef(null);
   const [displaySettings, setDisplaySettings] = useState(()=>load('display',{showOptions:true,showAnswer:true,showExplanation:true,showTags:true}));
   const [compact, setCompact] = useState(()=>load('compact',false));
   const [theme, setTheme] = useState(()=>load('theme','dark'));
@@ -1849,11 +1820,6 @@ function App() {
       const pct = el.scrollTop/(el.scrollHeight-el.clientHeight)*100;
       const fill = document.getElementById('read-fill');
       if (fill) fill.style.height = `${Math.min(100,pct)}%`;
-      // Show floating toolbar once static toolbar scrolls out of view
-      if (toolbarRef.current) {
-        const rect = toolbarRef.current.getBoundingClientRect();
-        setToolbarVisible(rect.bottom < 58);
-      }
     };
     window.addEventListener('scroll',onScroll,{passive:true});
     return ()=>window.removeEventListener('scroll',onScroll);
@@ -2563,6 +2529,130 @@ function App() {
         </div>
       </div>
 
+      {/* ══ TOOLBAR ══ */}
+      {questions.length>0&&!isLoading&&(
+        <div style={{background:'var(--surface)',padding:'8px 20px',borderBottom:'1px solid var(--border)',position:'sticky',top:58,zIndex:40}}>
+          <div style={{maxWidth:1200,margin:'0 auto',display:'flex',flexWrap:'wrap',gap:8,alignItems:'center'}}>
+
+            {/* Lesson filter */}
+            <div style={{position:'relative'}}>
+              <button className="btn" onClick={()=>{setLessonDDOpen(v=>!v);setTagDDOpen(false);}}>
+                <I.Filter/>{selectedLessons.size===0?'All Lessons':`${selectedLessons.size} lesson(s)`}<I.Cd/>
+              </button>
+              {lessonDDOpen&&(
+                <div className="dropdown" style={{width:280}}>
+                  <div className="dd-item" onClick={()=>{setSelectedLessons(new Set());setLessonDDOpen(false);}} style={{color:'var(--primary)',fontWeight:700,borderBottom:'1px solid var(--border)'}}>✕ Clear filter</div>
+                  {availableLessons.map(l=>(
+                    <div key={l} className="dd-item" onClick={()=>toggleLesson(l)}>
+                      <input type="checkbox" checked={selectedLessons.has(l)} onChange={()=>{}} style={{accentColor:'var(--primary)'}}/>
+                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={l}>{l}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tag filter */}
+            {allTags.tags.length>0&&(
+              <div style={{position:'relative'}}>
+                <button className="btn" onClick={()=>{setTagDDOpen(v=>!v);setLessonDDOpen(false);}}>
+                  <I.Tag/>{selectedTags.size===0?'All Tags':`${selectedTags.size} tag(s)`}<I.Cd/>
+                </button>
+                {tagDDOpen&&(
+                  <TagFilterPanel
+                    allTags={allTags.tags}
+                    restTags={allTags.restTags}
+                    selectedTags={selectedTags}
+                    onToggle={toggleTag}
+                    onClear={()=>{setSelectedTags(new Set());setTagDDOpen(false);}}
+                    questions={questions}
+                    customTags={customTags}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Quick filter chips */}
+            <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+              {[
+                {key:'all',    label:'All',     color:'var(--muted)'},
+                {key:'unsolved',label:'Unsolved',color:'var(--yellow)'},
+                {key:'done',   label:'Done',    color:'var(--green)'},
+                {key:'fav',    label:'★ Fav',   color:'var(--yellow)'},
+                {key:'weak',   label:'⚡ Weak', color:'var(--red)'},
+              ].map(f => {
+                const on = qFilters.has(f.key) || (f.key==='all' && qFilters.has('all'));
+                return (
+                  <button key={f.key} onClick={()=>toggleQFilter(f.key)}
+                    style={{padding:'4px 9px',borderRadius:6,fontSize:11,fontWeight:600,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap',
+                      border:`1px solid ${on ? f.color : 'var(--border2)'}`,
+                      background: on ? f.color+'22' : 'var(--card2)',
+                      color: on ? f.color : 'var(--muted)'}}>
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Search */}
+            <div style={{position:'relative',flex:1,minWidth:200}}>
+              <div style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'var(--muted)'}}><I.Search/></div>
+              <input ref={searchRef} className="input" style={{paddingLeft:32}} placeholder="Search, ID, or range (1-50)... (Ctrl+F)" value={searchQuery} onChange={e=>handleSearch(e.target.value)}/>
+              {searchQuery&&<button onClick={()=>{setSearchQuery('');setDSearch('');}} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--muted)'}}><I.X/></button>}
+            </div>
+
+            {/* Display */}
+            <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+              {[{k:'showOptions',l:'Options'},{k:'showAnswer',l:'Answers'},{k:'showExplanation',l:'Explain'},{k:'showTags',l:'Tags'}].map(s=>(
+                <button key={s.k} className="btn" onClick={()=>{
+                  if(s.k==='showAnswer') setLocalAnsOverrides({});
+                  if(s.k==='showOptions') setLocalOptOverrides({});
+                  if(s.k==='showExplanation') setLocalExpOverrides({});
+                  setDisplaySettings(p=>({...p,[s.k]:!p[s.k]}));
+                }} style={{fontSize:11,padding:'5px 9px',...(displaySettings[s.k]?{background:'var(--primary)',color:'#fff',borderColor:'var(--primary)'}:{opacity:.6})}}>
+                  {displaySettings[s.k]?<I.Eye/>:<I.EyeOff/>} {s.l}
+                </button>
+              ))}
+              <button className="btn" onClick={()=>setCompact(v=>!v)} style={{fontSize:11,padding:'5px 9px',...(compact?{background:'var(--card2)'}:{opacity:.7})}}>
+                {compact?'⊡ Normal':'⊟ Compact'}
+              </button>
+              <button className="btn" onClick={toggleCollapseAll} style={{fontSize:11,padding:'5px 9px'}}>
+                {collapsedIds.size>0?'↕ Expand':'↕ Collapse'}
+              </button>
+              <button className="btn" onClick={()=>setAutoCollapseDone(v=>!v)}
+                title="Auto-collapse card when marked Done"
+                style={{fontSize:11,padding:'5px 9px',gap:5,...(autoCollapseDone?{background:'var(--green)',color:'#fff',borderColor:'var(--green)'}:{opacity:.65})}}>
+                {autoCollapseDone?'↙ Auto-fold ✓':'↙ Auto-fold'}
+              </button>
+              <button className="btn" onClick={()=>{setBulkMode(v=>!v);setSelectedBulk(new Set());}}
+                title="Bulk-select mode (checkbox select + batch actions)"
+                style={{fontSize:11,padding:'5px 9px',...(bulkMode?{background:'var(--purple)',color:'#fff',borderColor:'var(--purple)'}:{opacity:.75})}}>
+                {bulkMode?'☑ Bulk on':'☑ Bulk'}
+              </button>
+            </div>
+
+            <div style={{flex:1}}/>
+            <div style={{display:'flex',gap:6}}>
+              <button className="btn" onClick={exportToText} style={{fontSize:11}}><I.Copy/> Copy</button>
+              <button className="btn" onClick={exportToPDF} disabled={isExporting} style={{fontSize:11}}>{isExporting?<I.Loader/>:<I.Download/>} PDF</button>
+              <button className="btn" onClick={exportToDocx} style={{fontSize:11}}>📄 DOCX</button>
+              {/* Reset buttons */}
+              <div style={{width:1,height:20,background:'var(--border2)',margin:'0 2px'}}/>
+              <button className="btn" onClick={()=>{if(confirm(`Reset all progress for "${activeFile||'this file'}"?\nThis clears done, favorites, notes, wrong counts, and collections for this file only.`))resetFileData();}}
+                style={{fontSize:11,color:'var(--yellow)',borderColor:'var(--yellow)',opacity:.8}}
+                title="Reset progress for current file only">
+                ↺ File
+              </button>
+              <button className="btn" onClick={()=>{if(confirm('Reset ALL data for ALL files?\nThis cannot be undone.'))resetAllData();}}
+                style={{fontSize:11,color:'var(--red)',borderColor:'var(--red)',opacity:.8}}
+                title="Reset everything — all files, all progress">
+                🗑 All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══ COLLECTION SETS PANEL ══ */}
       {questions.length>0&&(
         <div className="set-panel">
@@ -2685,129 +2775,6 @@ function App() {
         </div>
       )}
 
-      {/* ══ TOOLBAR ══ */}
-      {questions.length>0&&!isLoading&&(
-        <div ref={toolbarRef} style={{background:'var(--surface)',padding:'10px 20px',borderBottom:'1px solid var(--border)'}}>
-          <div style={{maxWidth:1200,margin:'0 auto',display:'flex',flexWrap:'wrap',gap:8,alignItems:'center'}}>
-
-            {/* Lesson filter */}
-            <div style={{position:'relative'}}>
-              <button className="btn" onClick={()=>{setLessonDDOpen(v=>!v);setTagDDOpen(false);}}>
-                <I.Filter/>{selectedLessons.size===0?'All Lessons':`${selectedLessons.size} lesson(s)`}<I.Cd/>
-              </button>
-              {lessonDDOpen&&(
-                <div className="dropdown" style={{width:280}}>
-                  <div className="dd-item" onClick={()=>{setSelectedLessons(new Set());setLessonDDOpen(false);}} style={{color:'var(--primary)',fontWeight:700,borderBottom:'1px solid var(--border)'}}>✕ Clear filter</div>
-                  {availableLessons.map(l=>(
-                    <div key={l} className="dd-item" onClick={()=>toggleLesson(l)}>
-                      <input type="checkbox" checked={selectedLessons.has(l)} onChange={()=>{}} style={{accentColor:'var(--primary)'}}/>
-                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={l}>{l}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Tag filter */}
-            {allTags.tags.length>0&&(
-              <div style={{position:'relative'}}>
-                <button className="btn" onClick={()=>{setTagDDOpen(v=>!v);setLessonDDOpen(false);}}>
-                  <I.Tag/>{selectedTags.size===0?'All Tags':`${selectedTags.size} tag(s)`}<I.Cd/>
-                </button>
-                {tagDDOpen&&(
-                  <TagFilterPanel
-                    allTags={allTags.tags}
-                    restTags={allTags.restTags}
-                    selectedTags={selectedTags}
-                    onToggle={toggleTag}
-                    onClear={()=>{setSelectedTags(new Set());setTagDDOpen(false);}}
-                    questions={questions}
-                    customTags={customTags}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Quick filter chips */}
-            <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-              {[
-                {key:'all',    label:'All',     color:'var(--muted)'},
-                {key:'unsolved',label:'Unsolved',color:'var(--yellow)'},
-                {key:'done',   label:'Done',    color:'var(--green)'},
-                {key:'fav',    label:'★ Fav',   color:'var(--yellow)'},
-                {key:'weak',   label:'⚡ Weak', color:'var(--red)'},
-              ].map(f => {
-                const on = qFilters.has(f.key) || (f.key==='all' && qFilters.has('all'));
-                return (
-                  <button key={f.key} onClick={()=>toggleQFilter(f.key)}
-                    style={{padding:'4px 9px',borderRadius:6,fontSize:11,fontWeight:600,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap',
-                      border:`1px solid ${on ? f.color : 'var(--border2)'}`,
-                      background: on ? f.color+'22' : 'var(--card2)',
-                      color: on ? f.color : 'var(--muted)'}}>
-                    {f.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Search */}
-            <div style={{position:'relative',flex:1,minWidth:200}}>
-              <div style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'var(--muted)'}}><I.Search/></div>
-              <input ref={searchRef} className="input" style={{paddingLeft:32}} placeholder="Search, ID, or range (1-50)... (Ctrl+F)" value={searchQuery} onChange={e=>handleSearch(e.target.value)}/>
-              {searchQuery&&<button onClick={()=>{setSearchQuery('');setDSearch('');}} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--muted)'}}><I.X/></button>}
-            </div>
-
-            {/* Display */}
-            <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-              {[{k:'showOptions',l:'Options'},{k:'showAnswer',l:'Answers'},{k:'showExplanation',l:'Explain'},{k:'showTags',l:'Tags'}].map(s=>(
-                <button key={s.k} className="btn" onClick={()=>{
-                  if(s.k==='showAnswer') setLocalAnsOverrides({});
-                  if(s.k==='showOptions') setLocalOptOverrides({});
-                  if(s.k==='showExplanation') setLocalExpOverrides({});
-                  setDisplaySettings(p=>({...p,[s.k]:!p[s.k]}));
-                }} style={{fontSize:11,padding:'5px 9px',...(displaySettings[s.k]?{background:'var(--primary)',color:'#fff',borderColor:'var(--primary)'}:{opacity:.6})}}>
-                  {displaySettings[s.k]?<I.Eye/>:<I.EyeOff/>} {s.l}
-                </button>
-              ))}
-              <button className="btn" onClick={()=>setCompact(v=>!v)} style={{fontSize:11,padding:'5px 9px',...(compact?{background:'var(--card2)'}:{opacity:.7})}}>
-                {compact?'⊡ Normal':'⊟ Compact'}
-              </button>
-              <button className="btn" onClick={toggleCollapseAll} style={{fontSize:11,padding:'5px 9px'}}>
-                {collapsedIds.size>0?'↕ Expand':'↕ Collapse'}
-              </button>
-              <button className="btn" onClick={()=>setAutoCollapseDone(v=>!v)}
-                title="Auto-collapse card when marked Done"
-                style={{fontSize:11,padding:'5px 9px',gap:5,...(autoCollapseDone?{background:'var(--green)',color:'#fff',borderColor:'var(--green)'}:{opacity:.65})}}>
-                {autoCollapseDone?'↙ Auto-fold ✓':'↙ Auto-fold'}
-              </button>
-              <button className="btn" onClick={()=>{setBulkMode(v=>!v);setSelectedBulk(new Set());}}
-                title="Bulk-select mode (checkbox select + batch actions)"
-                style={{fontSize:11,padding:'5px 9px',...(bulkMode?{background:'var(--purple)',color:'#fff',borderColor:'var(--purple)'}:{opacity:.75})}}>
-                {bulkMode?'☑ Bulk on':'☑ Bulk'}
-              </button>
-            </div>
-
-            <div style={{flex:1}}/>
-            <div style={{display:'flex',gap:6}}>
-              <button className="btn" onClick={exportToText} style={{fontSize:11}}><I.Copy/> Copy</button>
-              <button className="btn" onClick={exportToPDF} disabled={isExporting} style={{fontSize:11}}>{isExporting?<I.Loader/>:<I.Download/>} PDF</button>
-              <button className="btn" onClick={exportToDocx} style={{fontSize:11}}>📄 DOCX</button>
-              {/* Reset buttons */}
-              <div style={{width:1,height:20,background:'var(--border2)',margin:'0 2px'}}/>
-              <button className="btn" onClick={()=>{if(confirm(`Reset all progress for "${activeFile||'this file'}"?\nThis clears done, favorites, notes, wrong counts, and collections for this file only.`))resetFileData();}}
-                style={{fontSize:11,color:'var(--yellow)',borderColor:'var(--yellow)',opacity:.8}}
-                title="Reset progress for current file only">
-                ↺ File
-              </button>
-              <button className="btn" onClick={()=>{if(confirm('Reset ALL data for ALL files?\nThis cannot be undone.'))resetAllData();}}
-                style={{fontSize:11,color:'var(--red)',borderColor:'var(--red)',opacity:.8}}
-                title="Reset everything — all files, all progress">
-                🗑 All
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ══ MAIN ══ */}
       <main style={{flex:1,maxWidth:1200,width:'100%',margin:'0 auto',padding:'18px 20px',boxSizing:'border-box'}}>
@@ -2949,133 +2916,7 @@ function App() {
         )}
       </main>
 
-      {/* ══ FLOATING TOOLBAR ══ */}
-      {questions.length>0&&!isLoading&&(
-        <>
-        <div className={`float-bar${toolbarVisible?'':' hidden'}`}>
-
-          {/* Lesson filter */}
-          <div style={{position:'relative'}}>
-            <button className={`float-btn${selectedLessons.size>0?' on':''}`}
-              onClick={()=>{setFloatLessonOpen(v=>!v);setFloatTagOpen(false);}}>
-              <I.Filter/>{selectedLessons.size===0?'Lessons':`${selectedLessons.size} lesson(s)`}<I.Cd s={10}/>
-            </button>
-            {floatLessonOpen&&(
-              <div className="float-dd" style={{left:0}}>
-                <div className="dd-item" onClick={()=>{setSelectedLessons(new Set());setFloatLessonOpen(false);}} style={{color:'var(--primary)',fontWeight:700,borderBottom:'1px solid var(--border)'}}>✕ Clear</div>
-                {availableLessons.map(l=>(
-                  <div key={l} className="dd-item" onClick={()=>toggleLesson(l)}>
-                    <input type="checkbox" checked={selectedLessons.has(l)} onChange={()=>{}} style={{accentColor:'var(--primary)'}}/>
-                    <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={l}>{l}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Tag filter */}
-          {allTags.tags.length>0&&(
-            <div style={{position:'relative'}}>
-              <button className={`float-btn${selectedTags.size>0?' on':''}`}
-                onClick={()=>{setFloatTagOpen(v=>!v);setFloatLessonOpen(false);}}>
-                <I.Tag/>{selectedTags.size===0?'Tags':`${selectedTags.size} tag(s)`}<I.Cd s={10}/>
-              </button>
-              {floatTagOpen&&(
-                <TagFilterPanel
-                  allTags={allTags.tags}
-                  restTags={allTags.restTags}
-                  selectedTags={selectedTags}
-                  onToggle={toggleTag}
-                  onClear={()=>{setSelectedTags(new Set());setFloatTagOpen(false);}}
-                  questions={questions}
-                  customTags={customTags}
-                  floatMode={true}
-                />
-              )}
-            </div>
-          )}
-
-          <div className="float-sep"/>
-
-          {/* Quick filters */}
-          {[
-            {key:'all',     label:'All',      cls:''},
-            {key:'unsolved',label:'Unsolved',  cls:'on-y'},
-            {key:'done',    label:'Done',      cls:'on-g'},
-            {key:'fav',     label:'★',         cls:'on-y'},
-            {key:'weak',    label:'⚡',         cls:'on-p'},
-          ].map(f=>{
-            const on = qFilters.has(f.key);
-            return (
-              <button key={f.key} className={`float-btn${on&&f.cls?' '+f.cls:''}`}
-                onClick={()=>toggleQFilter(f.key)}>
-                {f.label}
-              </button>
-            );
-          })}
-
-          <div className="float-sep"/>
-
-          {/* Display toggles */}
-          {[
-            {k:'showOptions',    l:'Opts',  cls:'on'},
-            {k:'showAnswer',     l:'Ans',   cls:'on'},
-            {k:'showExplanation',l:'Exp',   cls:'on'},
-            {k:'showTags',       l:'Tags',  cls:'on'},
-          ].map(s=>{
-            const on = displaySettings[s.k];
-            return (
-              <button key={s.k} className={`float-btn${on?' '+s.cls:''}`}
-                onClick={()=>{
-                  if(s.k==='showAnswer') setLocalAnsOverrides({});
-                  if(s.k==='showOptions') setLocalOptOverrides({});
-                  if(s.k==='showExplanation') setLocalExpOverrides({});
-                  setDisplaySettings(p=>({...p,[s.k]:!p[s.k]}));
-                }}>
-                {on?<I.Eye/>:<I.EyeOff/>} {s.l}
-              </button>
-            );
-          })}
-
-          <button className={`float-btn${compact?' on-m':''}`} onClick={()=>setCompact(v=>!v)}>
-            {compact?'⊡ Normal':'⊟ Compact'}
-          </button>
-          <button className="float-btn" onClick={toggleCollapseAll}>
-            {collapsedIds.size>0?'↕ Expand':'↕ Collapse'}
-          </button>
-          <button className={`float-btn${autoCollapseDone?' on-g':''}`} onClick={()=>setAutoCollapseDone(v=>!v)} title="Auto-collapse when marked Done">
-            ↙ Auto-fold{autoCollapseDone?' ✓':''}
-          </button>
-          <button className={`float-btn${bulkMode?' on-p':''}`} onClick={()=>{setBulkMode(v=>!v);setSelectedBulk(new Set());}}>
-            ☑ Bulk
-          </button>
-
-          <div className="float-sep"/>
-
-          {/* Export */}
-          <button className="float-btn" onClick={exportToText} title="Copy to clipboard"><I.Copy/></button>
-          <button className="float-btn" onClick={exportToPDF} disabled={isExporting} title="Export PDF">{isExporting?<I.Loader/>:<I.Download/>}</button>
-          <button className="float-btn" onClick={exportToDocx} title="Export DOCX">📄</button>
-
-          <div className="float-sep"/>
-
-          {/* Reset */}
-          <button className="float-btn" style={{color:'var(--yellow)'}}
-            onClick={()=>{if(confirm(`Reset progress for "${activeFile||'this file'}"?`))resetFileData();}}
-            title="Reset this file's progress">↺</button>
-          <button className="float-btn" style={{color:'var(--red)'}}
-            onClick={()=>{if(confirm('Reset ALL data for ALL files?'))resetAllData();}}
-            title="Reset all data">🗑</button>
-        </div>
-
-        {/* Dismiss float dropdowns on outside click */}
-        {(floatLessonOpen||floatTagOpen)&&(
-          <div style={{position:'fixed',inset:0,zIndex:47}} onClick={()=>{setFloatLessonOpen(false);setFloatTagOpen(false);}}/>
-        )}
-        </>
-      )}
-
-      {/* ══ MODALS ══ */}
+      {/* ══ MODALS ══ */
       {showExamLauncher&&<ExamLauncher
         questions={questions}
         collections={collections}
