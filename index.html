@@ -1480,7 +1480,42 @@ const QuestionCard = memo(function QuestionCard({
 
 
 
+function LessonFilterPanel({ availableLessons, selectedLessons, onToggle, onClear }) {
+  const [q, setQ] = useState('');
+  const inputRef = useRef(null);
+  useEffect(()=>{ setTimeout(()=>inputRef.current?.focus(), 50); }, []);
+  const filtered = q.trim() ? availableLessons.filter(l=>l.toLowerCase().includes(q.toLowerCase())) : availableLessons;
+  return (
+    <div className="dropdown" style={{width:300,padding:0,overflow:'hidden'}}>
+      <div style={{padding:'7px 10px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6}}>
+        <I.Search/>
+        <input ref={inputRef} value={q} onChange={e=>setQ(e.target.value)}
+          placeholder="Search lessons…"
+          style={{flex:1,background:'none',border:'none',outline:'none',fontSize:13,color:'var(--text)',fontFamily:'var(--font)'}}/>
+        {q&&<button onClick={()=>setQ('')} style={{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',padding:0,lineHeight:1}}><I.X s={12}/></button>}
+      </div>
+      {selectedLessons.size>0&&(
+        <div className="dd-item" onClick={onClear} style={{color:'var(--red)',fontWeight:700,borderBottom:'1px solid var(--border)',fontSize:12}}>✕ Clear all ({selectedLessons.size})</div>
+      )}
+      <div style={{maxHeight:280,overflowY:'auto'}}>
+        {filtered.length===0&&<div style={{padding:'10px 14px',fontSize:12,color:'var(--muted)'}}>No matches</div>}
+        {filtered.map(l=>(
+          <div key={l} className="dd-item" onClick={()=>onToggle(l)}
+            style={{background:selectedLessons.has(l)?'var(--pg)':undefined}}>
+            <input type="checkbox" checked={selectedLessons.has(l)} onChange={()=>{}} style={{accentColor:'var(--primary)',flexShrink:0}}/>
+            <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+              color:selectedLessons.has(l)?'var(--primary)':undefined}} title={l}>{l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TagFilterPanel({ allTags, restTags, selectedTags, onToggle, onClear, questions, customTags, floatMode }) {
+  const [q, setQ] = useState('');
+  const inputRef = useRef(null);
+  useEffect(()=>{ setTimeout(()=>inputRef.current?.focus(), 50); }, []);
 
   const tagCounts = useMemo(()=>{
     const m = {};
@@ -1493,33 +1528,38 @@ function TagFilterPanel({ allTags, restTags, selectedTags, onToggle, onClear, qu
     return m;
   },[questions,customTags,restTags]);
 
+  const filtered = useMemo(()=>{
+    if (!q.trim()) return allTags;
+    const lo = q.toLowerCase();
+    return allTags.filter(t => t==='__REST__' ? 'rest'.includes(lo) : t.toLowerCase().includes(lo));
+  },[allTags, q]);
+
   return (
     <div style={{
       position: floatMode ? 'fixed' : 'absolute',
       top: floatMode ? 112 : 'calc(100% + 6px)',
       left: floatMode ? 'unset' : 0,
-      minWidth:260, width:300,
+      width:300,
       background:'var(--card)',border:'1px solid var(--border2)',borderRadius:'var(--r)',
       boxShadow:'var(--shadowl)',zIndex:200,animation:'fadeUp .15s ease-out',
       overflow:'hidden'
     }}>
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-        padding:'8px 14px',borderBottom:'1px solid var(--border)'}}>
-        <span style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em'}}>
-          Tags{selectedTags.size>0&&<span style={{color:'var(--primary)',marginLeft:6}}>{selectedTags.size} active</span>}
-        </span>
-        {selectedTags.size>0&&(
-          <button onClick={onClear} style={{background:'none',border:'none',cursor:'pointer',
-            fontSize:11,fontWeight:700,color:'var(--red)',fontFamily:'var(--font)',padding:0}}>
-            ✕ Clear
-          </button>
-        )}
+      {/* Search */}
+      <div style={{padding:'7px 10px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6}}>
+        <I.Search/>
+        <input ref={inputRef} value={q} onChange={e=>setQ(e.target.value)}
+          placeholder="Search tags…"
+          style={{flex:1,background:'none',border:'none',outline:'none',fontSize:13,color:'var(--text)',fontFamily:'var(--font)'}}/>
+        {q&&<button onClick={()=>setQ('')} style={{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',padding:0,lineHeight:1}}><I.X s={12}/></button>}
       </div>
-
+      {/* Clear all */}
+      {selectedTags.size>0&&(
+        <div className="dd-item" onClick={onClear} style={{color:'var(--red)',fontWeight:700,borderBottom:'1px solid var(--border)',fontSize:12}}>✕ Clear all ({selectedTags.size})</div>
+      )}
       {/* Scrollable list */}
-      <div style={{maxHeight:300,overflowY:'auto'}}>
-        {allTags.map(t=>{
+      <div style={{maxHeight:280,overflowY:'auto'}}>
+        {filtered.length===0&&<div style={{padding:'10px 14px',fontSize:12,color:'var(--muted)'}}>No matches</div>}
+        {filtered.map(t=>{
           const active = selectedTags.has(t);
           const cnt = tagCounts[t]||0;
           const isRest = t==='__REST__';
@@ -2531,15 +2571,12 @@ function App() {
                 <I.Filter/>{selectedLessons.size===0?'All Lessons':`${selectedLessons.size} lesson(s)`}<I.Cd/>
               </button>
               {lessonDDOpen&&(
-                <div className="dropdown" style={{width:280}}>
-                  <div className="dd-item" onClick={()=>{setSelectedLessons(new Set());setLessonDDOpen(false);}} style={{color:'var(--primary)',fontWeight:700,borderBottom:'1px solid var(--border)'}}>✕ Clear filter</div>
-                  {availableLessons.map(l=>(
-                    <div key={l} className="dd-item" onClick={()=>toggleLesson(l)}>
-                      <input type="checkbox" checked={selectedLessons.has(l)} onChange={()=>{}} style={{accentColor:'var(--primary)'}}/>
-                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={l}>{l}</span>
-                    </div>
-                  ))}
-                </div>
+                <LessonFilterPanel
+                  availableLessons={availableLessons}
+                  selectedLessons={selectedLessons}
+                  onToggle={toggleLesson}
+                  onClear={()=>{setSelectedLessons(new Set());setLessonDDOpen(false);}}
+                />
               )}
             </div>
 
