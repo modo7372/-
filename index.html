@@ -1789,6 +1789,18 @@ function App() {
   const searchRef = useRef(null);
   const fileInputRef = useRef(null);
   const searchDebRef = useRef(null);
+  const lessonDDRef = useRef(null);
+  const tagDDRef = useRef(null);
+
+  // Close dropdowns on outside mousedown
+  useEffect(()=>{
+    const handler = e => {
+      if (lessonDDRef.current && !lessonDDRef.current.contains(e.target)) setLessonDDOpen(false);
+      if (tagDDRef.current && !tagDDRef.current.contains(e.target)) setTagDDOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return ()=>document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Weak spots: wrong ≥ 3
   const weakIds = useMemo(()=>new Set(Object.entries(wrongCounts).filter(([,c])=>c>=3).map(([id])=>id)),[wrongCounts]);
@@ -2531,11 +2543,11 @@ function App() {
 
       {/* ══ TOOLBAR ══ */}
       {questions.length>0&&!isLoading&&(
-        <div style={{background:'var(--surface)',padding:'8px 20px',borderBottom:'1px solid var(--border)',position:'sticky',top:58,zIndex:40}}>
+        <div style={{background:'var(--surface)',padding:'8px 20px',borderBottom:'1px solid var(--border)',position:'sticky',top:58,zIndex:120}}>
           <div style={{maxWidth:1200,margin:'0 auto',display:'flex',flexWrap:'wrap',gap:8,alignItems:'center'}}>
 
             {/* Lesson filter */}
-            <div style={{position:'relative'}}>
+            <div ref={lessonDDRef} style={{position:'relative'}}>
               <button className="btn" onClick={()=>{setLessonDDOpen(v=>!v);setTagDDOpen(false);}}>
                 <I.Filter/>{selectedLessons.size===0?'All Lessons':`${selectedLessons.size} lesson(s)`}<I.Cd/>
               </button>
@@ -2554,7 +2566,7 @@ function App() {
 
             {/* Tag filter */}
             {allTags.tags.length>0&&(
-              <div style={{position:'relative'}}>
+              <div ref={tagDDRef} style={{position:'relative'}}>
                 <button className="btn" onClick={()=>{setTagDDOpen(v=>!v);setLessonDDOpen(false);}}>
                   <I.Tag/>{selectedTags.size===0?'All Tags':`${selectedTags.size} tag(s)`}<I.Cd/>
                 </button>
@@ -2966,7 +2978,6 @@ function App() {
       )}
 
       {/* Close dropdowns on outside click */}
-      {(lessonDDOpen||tagDDOpen)&&<div style={{position:'fixed',inset:0,zIndex:50}} onClick={()=>{setLessonDDOpen(false);setTagDDOpen(false);}}/>}
     </div>
   );
 }
