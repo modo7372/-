@@ -561,14 +561,20 @@ function resolveAtom(q, questions) {
   const rangeM = q.match(/^(\d+)\s*-\s*(\d+)$/);
   if (rangeM) {
     const lo = parseInt(rangeM[1]), hi = parseInt(rangeM[2]);
-    questions.forEach(qq => { if (qq.id >= lo && qq.id <= hi) matched.add(qq.id); });
+    questions.forEach(qq => {
+      const n = parseInt(qNum(qq.id));
+      if (n >= lo && n <= hi) matched.add(qq.id);
+    });
     return matched;
   }
 
   // ── ID list: "44, 45, 100" ──
   if (/^[\d\s,]+$/.test(q)) {
     const ids = q.split(/[\s,]+/).map(Number).filter(Boolean);
-    questions.forEach(qq => { const n = typeof qq.id==='string' ? (qq.numId||parseInt(qq.id.split('__')[1]||qq.id)) : qq.id; if (ids.includes(n)||ids.includes(qq.id)) matched.add(qq.id); });
+    questions.forEach(qq => {
+      const n = parseInt(qNum(qq.id));
+      if (ids.includes(n)) matched.add(qq.id);
+    });
     return matched;
   }
 
@@ -823,7 +829,7 @@ function CollectionsModal({ questions, collections, setName, onSave, onClose, pi
                 </div>
                 <input
                   className="input"
-                  placeholder='e.g. fever IN 1-50  |  tag:malaria  |  lesson:inf  |  fever & 1-50  |  pneumonia; typhoid'
+                  placeholder='e.g. 1-80  |  5, 12, 44  |  fever IN 1-50  |  tag:malaria  |  lesson:cardio'
                   value={qInput}
                   onChange={e => handleQueryInput(active, e.target.value)}
                   onKeyDown={e => e.key==='Enter' && qInput.trim() && applyQuery(active)}
@@ -869,7 +875,7 @@ function CollectionsModal({ questions, collections, setName, onSave, onClose, pi
                       const qq = questions.find(x => x.id === qid);
                       return qq ? (
                         <div key={qid} style={{ fontSize:11, color:'var(--muted)', display:'flex', gap:6 }}>
-                          <span style={{ fontFamily:'var(--mono)', color:'var(--primary)', flexShrink:0 }}>#{qid}</span>
+                          <span style={{ fontFamily:'var(--mono)', color:'var(--primary)', flexShrink:0 }}>#{qNum(qid)}</span>
                           <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{qq.question.slice(0,70)}{qq.question.length>70?'…':''}</span>
                         </div>
                       ) : null;
@@ -914,7 +920,7 @@ function CollectionsModal({ questions, collections, setName, onSave, onClose, pi
                       <input type="checkbox" checked={checked} onChange={() => toggleQ(active, q.id)}
                         style={{ marginTop:2, accentColor:activeCol.color }}/>
                       <span style={{ fontSize:12, lineHeight:1.5, flex:1 }}>
-                        <span style={{ fontFamily:'var(--mono)', color:'var(--muted)', fontSize:10 }}>#{q.id}</span>
+                        <span style={{ fontFamily:'var(--mono)', color:'var(--muted)', fontSize:10 }}>#{qNum(q.id)}</span>
                         {' '}{q.question.slice(0,75)}{q.question.length>75?'…':''}
                       </span>
                     </label>
