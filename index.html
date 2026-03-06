@@ -759,7 +759,7 @@ function QueryEntryRow({ entry, questions, onRerun, onDelete, onEdit, onLoadToIn
   );
 }
 
-function CollectionsModal({ questions, collections, setName, onSave, onClose, pinnedIds, favIds, completedIds, wrongIds }) {
+function CollectionsModal({ questions, collections, setName, systemSets, onSave, onClose, pinnedIds, favIds, completedIds, wrongIds, srData, weakIds }) {
   const [colls, setColls] = useState(() => {
     const c = JSON.parse(JSON.stringify(collections));
     // ensure every collection has a queries array
@@ -862,21 +862,35 @@ function CollectionsModal({ questions, collections, setName, onSave, onClose, pi
   };
 
   const PRESETS = [
-    { name: 'Wrong Answers',  color: '#f06058', fn: () => Array.from(wrongIds) },
-    { name: 'Exam Day Review',color: '#f5a623', fn: () => Array.from(favIds) },
-    { name: 'Completed',      color: '#3ecf8e', fn: () => Array.from(completedIds) },
+    { name:'Wrong Answers',   color:'#f06058', icon:'⚡', desc:'Questions answered wrong ≥3×',
+      query:'', fn:()=>Array.from(wrongIds) },
+    { name:'Favourites',      color:'#f5a623', icon:'★', desc:'Starred questions',
+      query:'', fn:()=>Array.from(favIds) },
+    { name:'Completed',       color:'#3ecf8e', icon:'✓', desc:'Marked done',
+      query:'', fn:()=>Array.from(completedIds) },
+    { name:'Unsolved',        color:'#5b8dee', icon:'○', desc:'Not yet done',
+      query:'', fn:()=>questions.filter(q=>!completedIds.has(q.id)).map(q=>q.id) },
+    { name:'Has Explanation', color:'#a78bfa', icon:'📖', desc:'Questions with explanation text',
+      query:'exp:.', fn:()=>questions.filter(q=>q.explanation&&q.explanation.trim()).map(q=>q.id) },
+    { name:'MCQ Only',        color:'#38bdf8', icon:'☑', desc:'Questions with options (MCQ)',
+      query:'', fn:()=>questions.filter(q=>q.options&&q.options.length>0).map(q=>q.id) },
+    { name:'First Half',      color:'#fb923c', icon:'①', desc:`Questions 1–${Math.floor(questions.length/2)}`,
+      query:`1-${Math.floor(questions.length/2)}`, fn:()=>questions.slice(0,Math.floor(questions.length/2)).map(q=>q.id) },
+    { name:'Second Half',     color:'#e879f9', icon:'②', desc:`Questions ${Math.floor(questions.length/2)+1}–${questions.length}`,
+      query:`${Math.floor(questions.length/2)+1}-${questions.length}`, fn:()=>questions.slice(Math.floor(questions.length/2)).map(q=>q.id) },
   ];
 
+  const [activeTab2, setActiveTab2] = useState('mine'); // 'mine' | 'system'
   const qInput = (active && queryInputs[active]) || '';
   const qPreview = (active && queryPreviews[active]) || new Set();
   const previewCount = qPreview.size;
 
   return (
     <div className="modal-bg" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 680 }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 760, width:'95vw' }}>
 
         {/* Header */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
           <div style={{ fontWeight:800, fontSize:17, display:'flex', gap:8, alignItems:'center' }}>
             <I.Folder/>
             <input value={editedSetName} onChange={e=>setEditedSetName(e.target.value)}
@@ -891,199 +905,278 @@ function CollectionsModal({ questions, collections, setName, onSave, onClose, pi
           </div>
         </div>
 
-        {/* Presets */}
-        <div style={{ marginBottom:14 }}>
-          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', marginBottom:7 }}>Quick Presets</div>
-          <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
-            {PRESETS.map(p => (
-              <button key={p.name} className="btn" style={{ fontSize:11 }} onClick={() => {
-                const id = Date.now().toString();
-                setColls(prev => [...prev, { id, name:p.name, color:p.color, qIds:p.fn() }]);
-                setActive(id);
-              }}>+ {p.name}</button>
-            ))}
-          </div>
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:2, marginBottom:14, borderBottom:'1px solid var(--border)', paddingBottom:0 }}>
+          {[
+            { id:'mine',    label:`My Collections (${colls.length})` },
+            { id:'system',  label:`System (${(systemSets||[]).reduce((s,ss)=>s+ss.colls.length,0)})` },
+            { id:'presets', label:'Presets & Defaults' },
+          ].map(t => (
+            <button key={t.id} onClick={()=>{ setActiveTab2(t.id); if(t.id!=='mine') setActive(null); }}
+              style={{ padding:'6px 14px', fontSize:12, fontWeight:700, border:'none', cursor:'pointer',
+                borderBottom: activeTab2===t.id ? '2px solid var(--primary)' : '2px solid transparent',
+                background:'none', color: activeTab2===t.id ? 'var(--primary)' : 'var(--muted)',
+                transition:'color .15s', marginBottom:-1 }}>
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* New collection row */}
-        <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-          <input className="input" placeholder="Collection name…" value={newName}
-            onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==='Enter' && add()} style={{ flex:1 }}/>
-          <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
-            style={{ width:36, height:36, border:'none', borderRadius:6, cursor:'pointer', padding:2 }}/>
-          <button className="btn primary" onClick={add}>Add</button>
-        </div>
-
-        {/* Body: list + editor */}
-        <div style={{ display:'flex', gap:12, minHeight:360 }}>
-
-          {/* Left: collection list with drag reorder + inline edit */}
-          <div style={{ width:210, borderRight:'1px solid var(--border)', paddingRight:10, flexShrink:0, display:'flex', flexDirection:'column', gap:2 }}>
-            {colls.length === 0 && (
-              <div style={{ fontSize:12, color:'var(--muted)', textAlign:'center', padding:'30px 0' }}>No collections yet</div>
-            )}
-            {colls.map((c, idx) => (
-              <CollectionRow
-                key={c.id}
-                c={c}
-                idx={idx}
-                isActive={active===c.id}
-                onSelect={()=>setActive(c.id)}
-                onDelete={()=>del(c.id)}
-                onRename={(name)=>setColls(prev=>prev.map(x=>x.id!==c.id?x:{...x,name}))}
-                onRecolor={(color)=>setColls(prev=>prev.map(x=>x.id!==c.id?x:{...x,color}))}
-                onMoveUp={()=>setColls(prev=>{const a=[...prev];if(idx===0)return a;[a[idx-1],a[idx]]=[a[idx],a[idx-1]];return a;})}
-                onMoveDown={()=>setColls(prev=>{const a=[...prev];if(idx===a.length-1)return a;[a[idx],a[idx+1]]=[a[idx+1],a[idx]];return a;})}
-                isFirst={idx===0}
-                isLast={idx===colls.length-1}
-              />
-            ))}
+        {/* ── TAB: MY COLLECTIONS ── */}
+        {activeTab2 === 'mine' && (<>
+          {/* New collection row */}
+          <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+            <input className="input" placeholder="New collection name…" value={newName}
+              onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==='Enter' && add()} style={{ flex:1 }}/>
+            <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
+              style={{ width:36, height:36, border:'none', borderRadius:6, cursor:'pointer', padding:2 }}/>
+            <button className="btn primary" onClick={add}>+ New</button>
           </div>
 
-          {/* Right: editor panel */}
-          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:10, overflow:'hidden' }}>
-            {!active && (
-              <div style={{ fontSize:13, color:'var(--muted)', textAlign:'center', paddingTop:60 }}>
-                ← Select or create a collection to edit it
-              </div>
-            )}
+          {/* Body: list + editor */}
+          <div style={{ display:'flex', gap:12, minHeight:400 }}>
+            {/* Left: collection list */}
+            <div style={{ width:200, borderRight:'1px solid var(--border)', paddingRight:10, flexShrink:0, display:'flex', flexDirection:'column', gap:2, overflowY:'auto' }}>
+              {colls.length === 0 && (
+                <div style={{ fontSize:12, color:'var(--muted)', textAlign:'center', padding:'30px 0' }}>No collections yet.<br/>Create one above or<br/>clone from Presets tab.</div>
+              )}
+              {colls.map((c, idx) => (
+                <CollectionRow
+                  key={c.id} c={c} idx={idx}
+                  isActive={active===c.id}
+                  onSelect={()=>setActive(c.id)}
+                  onDelete={()=>del(c.id)}
+                  onRename={(name)=>setColls(prev=>prev.map(x=>x.id!==c.id?x:{...x,name}))}
+                  onRecolor={(color)=>setColls(prev=>prev.map(x=>x.id!==c.id?x:{...x,color}))}
+                  onMoveUp={()=>setColls(prev=>{const a=[...prev];if(idx===0)return a;[a[idx-1],a[idx]]=[a[idx],a[idx-1]];return a;})}
+                  onMoveDown={()=>setColls(prev=>{const a=[...prev];if(idx===a.length-1)return a;[a[idx],a[idx+1]]=[a[idx+1],a[idx]];return a;})}
+                  isFirst={idx===0} isLast={idx===colls.length-1}
+                />
+              ))}
+            </div>
 
-            {active && activeCol && (<>
-              {/* ── Saved Queries History ── */}
-              {(activeCol.queries||[]).length > 0 && (
-                <div style={{ background:'var(--card2)', border:'1px solid var(--border2)', borderRadius:10, padding:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', marginBottom:7 }}>
-                    Saved Queries ({activeCol.queries.length})
-                  </div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                    {(activeCol.queries||[]).map(entry => (
-                      <QueryEntryRow
-                        key={entry.ts}
-                        entry={entry}
-                        questions={questions}
-                        onRerun={()=>rerunEntry(active, entry)}
-                        onDelete={()=>deleteEntry(active, entry.ts)}
-                        onEdit={(newText)=>editEntry(active, entry.ts, newText)}
-                        onLoadToInput={()=>handleQueryInput(active, entry.text)}
-                      />
-                    ))}
-                  </div>
+            {/* Right: editor panel */}
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:10, overflow:'hidden' }}>
+              {!active && (
+                <div style={{ fontSize:13, color:'var(--muted)', textAlign:'center', paddingTop:60 }}>
+                  ← Select or create a collection to edit it
                 </div>
               )}
-
-              {/* ── Smart Query Input ── */}
-              <div style={{ background:'var(--card2)', border:'1px solid var(--border2)', borderRadius:10, padding:12 }}>
-                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', marginBottom:6 }}>
-                  Smart Add by Query
-                </div>
-                <input
-                  className="input"
-                  placeholder='e.g. 1-80  |  5, 12, 44  |  fever IN 1-50  |  tag:malaria  |  lesson:cardio'
-                  value={qInput}
-                  onChange={e => handleQueryInput(active, e.target.value)}
-                  onKeyDown={e => e.key==='Enter' && qInput.trim() && applyQuery(active)}
-                  style={{ marginBottom:8 }}
-                />
-                {/* Syntax hints */}
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                  {[
-                    ['1-50','ID range'],
-                    ['fever IN 1-50','keyword in range'],
-                    ['q:fever','question field'],
-                    ['tag:malaria','tag search'],
-                    ['lesson:inf','lesson search'],
-                    ['ans:B','answer key'],
-                    ['fever & 1-50','AND (intersect)'],
-                    ['pneumonia; typhoid','OR (union)'],
-                  ].map(([ex, tip]) => (
-                    <button key={ex} onClick={() => handleQueryInput(active, ex)}
-                      style={{ padding:'2px 8px', borderRadius:5, fontSize:10, fontFamily:'var(--mono)', fontWeight:600,
-                        background:'var(--card)', border:'1px solid var(--border2)', color:'var(--muted)', cursor:'pointer', whiteSpace:'nowrap' }}
-                      title={tip}>{ex}</button>
-                  ))}
-                </div>
-                {/* Syntax legend */}
-                <div style={{ fontSize:10, color:'var(--muted)', lineHeight:1.7, marginBottom:4, borderTop:'1px solid var(--border)', paddingTop:7 }}>
-                  <span style={{ fontWeight:700, color:'var(--primary)' }}>Query syntax: </span>
-                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>fever IN 1-50</code> → keyword scoped to range &nbsp;·&nbsp; </span>
-                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>A &amp; B</code> → AND (both) &nbsp;·&nbsp; </span>
-                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>A ; B</code> → OR (either) &nbsp;·&nbsp; </span>
-                  <span><code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>q: ans: tag: exp: lesson:</code> → field search</span>
-                </div>
-
-                {/* Preview */}
-                {qInput.trim() && (
-                  <div style={{ fontSize:12, color: previewCount>0?'var(--green)':'var(--red)', marginBottom:8, fontWeight:600 }}>
-                    {previewCount>0 ? `✓ Matches ${previewCount} question${previewCount!==1?'s':''}` : '✗ No matches'}
+              {active && activeCol && (<>
+                {/* Saved Queries */}
+                {(activeCol.queries||[]).length > 0 && (
+                  <div style={{ background:'var(--card2)', border:'1px solid var(--border2)', borderRadius:10, padding:10 }}>
+                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', marginBottom:7 }}>
+                      Saved Queries ({activeCol.queries.length})
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                      {(activeCol.queries||[]).map(entry => (
+                        <QueryEntryRow key={entry.ts} entry={entry} questions={questions}
+                          onRerun={()=>rerunEntry(active, entry)}
+                          onDelete={()=>deleteEntry(active, entry.ts)}
+                          onEdit={(newText)=>editEntry(active, entry.ts, newText)}
+                          onLoadToInput={()=>handleQueryInput(active, entry.text)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
-                {/* Preview list */}
-                {previewCount > 0 && (
-                  <div style={{ maxHeight:80, overflowY:'auto', marginBottom:8, display:'flex', flexDirection:'column', gap:3 }}>
-                    {Array.from(qPreview).slice(0,8).map(qid => {
-                      const qq = questions.find(x => x.id === qid);
-                      return qq ? (
-                        <div key={qid} style={{ fontSize:11, color:'var(--muted)', display:'flex', gap:6 }}>
-                          <span style={{ fontFamily:'var(--mono)', color:'var(--primary)', flexShrink:0 }}>#{qNum(qid)}</span>
-                          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{qq.question.slice(0,70)}{qq.question.length>70?'…':''}</span>
-                        </div>
-                      ) : null;
-                    })}
-                    {previewCount > 8 && <div style={{ fontSize:11, color:'var(--muted)' }}>…and {previewCount-8} more</div>}
-                  </div>
-                )}
-                <div style={{ display:'flex', gap:6 }}>
-                  <button className="btn primary" style={{ fontSize:12, flex:1 }}
-                    onClick={() => applyQuery(active)} disabled={!qInput.trim() || previewCount===0}>
-                    + Add
-                  </button>
-                  <button className="btn" style={{ fontSize:12, flex:1 }}
-                    onClick={() => replaceQuery(active)} disabled={!qInput.trim() || previewCount===0}
-                    title="Replace current selection with these results">
-                    ↺ Replace
-                  </button>
-                  <button className="btn" style={{ fontSize:12, flex:1, color:'var(--red)', borderColor:'var(--red)' }}
-                    onClick={() => removeQuery(active)} disabled={!qInput.trim() || previewCount===0}
-                    title="Remove matched questions from collection">
-                    − Remove
-                  </button>
-                </div>
-              </div>
 
-              {/* ── Manual checkbox list ── */}
-              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)' }}>
-                Or pick manually ({activeCol.qIds.length} selected)
-                {activeCol.qIds.length > 0 && (
-                  <button onClick={() => setColls(prev => prev.map(c => c.id!==active?c:{...c,qIds:[]}))}
-                    style={{ marginLeft:10, fontSize:10, color:'var(--red)', background:'none', border:'none', cursor:'pointer', fontWeight:700 }}>
-                    Clear all
-                  </button>
-                )}
-              </div>
-              <div style={{ flex:1, overflowY:'auto', maxHeight:200 }}>
-                {questions.map(q => {
-                  const checked = activeCol.qIds.includes(q.id);
-                  const isPreview = qPreview.has(q.id);
-                  return (
-                    <label key={q.id}
-                      style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'5px 8px', cursor:'pointer',
-                        borderRadius:6, transition:'background .1s',
-                        background: isPreview ? `${activeCol.color}18` : 'transparent',
-                        border: isPreview ? `1px solid ${activeCol.color}44` : '1px solid transparent' }}
-                      className="dd-item">
-                      <input type="checkbox" checked={checked} onChange={() => toggleQ(active, q.id)}
-                        style={{ marginTop:2, accentColor:activeCol.color }}/>
-                      <span style={{ fontSize:12, lineHeight:1.5, flex:1 }}>
-                        <span style={{ fontFamily:'var(--mono)', color:'var(--muted)', fontSize:10 }}>#{qNum(q.id)}</span>
-                        {' '}{q.question.slice(0,75)}{q.question.length>75?'…':''}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </>)}
+                {/* Smart Query Input */}
+                <div style={{ background:'var(--card2)', border:'1px solid var(--border2)', borderRadius:10, padding:12 }}>
+                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', marginBottom:6 }}>
+                    Smart Query
+                  </div>
+                  <input className="input"
+                    placeholder='e.g. 1-80  |  5,12,44  |  fever IN 1-50  |  tag:malaria  |  lesson:cardio'
+                    value={qInput}
+                    onChange={e => handleQueryInput(active, e.target.value)}
+                    onKeyDown={e => e.key==='Enter' && qInput.trim() && applyQuery(active)}
+                    style={{ marginBottom:8 }}
+                  />
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+                    {[['1-50','ID range'],['fever IN 1-50','keyword in range'],['q:fever','question field'],
+                      ['tag:malaria','tag'],['lesson:inf','lesson'],['ans:B','answer key'],
+                      ['A & B','AND'],['A ; B','OR']].map(([ex,tip]) => (
+                      <button key={ex} onClick={() => handleQueryInput(active, ex)}
+                        style={{ padding:'2px 8px', borderRadius:5, fontSize:10, fontFamily:'var(--mono)', fontWeight:600,
+                          background:'var(--card)', border:'1px solid var(--border2)', color:'var(--muted)', cursor:'pointer', whiteSpace:'nowrap' }}
+                        title={tip}>{ex}</button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize:10, color:'var(--muted)', lineHeight:1.7, marginBottom:6, borderTop:'1px solid var(--border)', paddingTop:6 }}>
+                    <span style={{ fontWeight:700, color:'var(--primary)' }}>Syntax: </span>
+                    <code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>fever IN 1-50</code> · <code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>A &amp; B</code> AND · <code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>A ; B</code> OR · <code style={{fontFamily:'var(--mono)',color:'var(--text)'}}>q: ans: tag: lesson:</code> fields
+                  </div>
+                  {qInput.trim() && (
+                    <div style={{ fontSize:12, color: previewCount>0?'var(--green)':'var(--red)', marginBottom:8, fontWeight:600 }}>
+                      {previewCount>0 ? `✓ Matches ${previewCount} question${previewCount!==1?'s':''}` : '✗ No matches'}
+                    </div>
+                  )}
+                  {previewCount > 0 && (
+                    <div style={{ maxHeight:70, overflowY:'auto', marginBottom:8, display:'flex', flexDirection:'column', gap:3 }}>
+                      {Array.from(qPreview).slice(0,8).map(qid => {
+                        const qq = questions.find(x => x.id === qid);
+                        return qq ? (
+                          <div key={qid} style={{ fontSize:11, color:'var(--muted)', display:'flex', gap:6 }}>
+                            <span style={{ fontFamily:'var(--mono)', color:'var(--primary)', flexShrink:0 }}>#{qNum(qid)}</span>
+                            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{qq.question.slice(0,65)}{qq.question.length>65?'…':''}</span>
+                          </div>
+                        ) : null;
+                      })}
+                      {previewCount > 8 && <div style={{ fontSize:11, color:'var(--muted)' }}>…and {previewCount-8} more</div>}
+                    </div>
+                  )}
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button className="btn primary" style={{ fontSize:12, flex:1 }}
+                      onClick={() => applyQuery(active)} disabled={!qInput.trim() || previewCount===0}>
+                      + Add
+                    </button>
+                    <button className="btn" style={{ fontSize:12, flex:1 }}
+                      onClick={() => replaceQuery(active)} disabled={!qInput.trim() || previewCount===0}>
+                      ↺ Replace
+                    </button>
+                    <button className="btn" style={{ fontSize:12, flex:1, color:'var(--red)', borderColor:'var(--red)' }}
+                      onClick={() => removeQuery(active)} disabled={!qInput.trim() || previewCount===0}>
+                      − Remove
+                    </button>
+                  </div>
+                </div>
+
+                {/* Manual checkbox list */}
+                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)' }}>
+                  Or pick manually ({activeCol.qIds.length} selected)
+                  {activeCol.qIds.length > 0 && (
+                    <button onClick={() => setColls(prev => prev.map(c => c.id!==active?c:{...c,qIds:[]}))}
+                      style={{ marginLeft:10, fontSize:10, color:'var(--red)', background:'none', border:'none', cursor:'pointer', fontWeight:700 }}>
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div style={{ flex:1, overflowY:'auto', maxHeight:180 }}>
+                  {questions.map(q => {
+                    const checked = activeCol.qIds.includes(q.id);
+                    const isPreview = qPreview.has(q.id);
+                    return (
+                      <label key={q.id}
+                        style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'5px 8px', cursor:'pointer',
+                          borderRadius:6, background: isPreview ? `${activeCol.color}18` : 'transparent',
+                          border: isPreview ? `1px solid ${activeCol.color}44` : '1px solid transparent' }}
+                        className="dd-item">
+                        <input type="checkbox" checked={checked} onChange={() => toggleQ(active, q.id)}
+                          style={{ marginTop:2, accentColor:activeCol.color }}/>
+                        <span style={{ fontSize:12, lineHeight:1.5, flex:1 }}>
+                          <span style={{ fontFamily:'var(--mono)', color:'var(--muted)', fontSize:10 }}>#{qNum(q.id)}</span>
+                          {' '}{q.question.slice(0,75)}{q.question.length>75?'…':''}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>)}
+            </div>
           </div>
-        </div>
+        </>)}
+
+        {/* ── TAB: SYSTEM COLLECTIONS ── */}
+        {activeTab2 === 'system' && (
+          <div style={{ minHeight:420, overflowY:'auto' }}>
+            {(!systemSets||systemSets.length===0) ? (
+              <div style={{ textAlign:'center', padding:60, color:'var(--muted)', fontSize:13 }}>
+                No system collections available yet.<br/>Load a question file first.
+              </div>
+            ) : systemSets.map(sset => (
+              <div key={sset.id} style={{ marginBottom:20 }}>
+                <div style={{ fontSize:11, fontWeight:800, textTransform:'uppercase', letterSpacing:'.08em',
+                  color:'var(--primary)', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
+                  {sset.name}
+                  <span style={{ fontWeight:400, fontSize:10, color:'var(--muted)' }}>({sset.colls.length} collections · auto-generated)</span>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                  {sset.colls.map(c => {
+                    const already = colls.some(x => x.name === c.name);
+                    return (
+                      <div key={c.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 10px',
+                        background:'var(--card2)', border:'1px solid var(--border)', borderRadius:8 }}>
+                        <div style={{ width:10, height:10, borderRadius:'50%', background:c.color, flexShrink:0 }}/>
+                        <span style={{ flex:1, fontSize:13, fontWeight:600 }}>{c.name}</span>
+                        <span style={{ fontSize:11, color:'var(--muted)', fontFamily:'var(--mono)' }}>{c.qIds.length} q</span>
+                        <button className="btn" style={{ fontSize:11, padding:'3px 10px', opacity: already?.7:1 }}
+                          title={already ? 'Already cloned to My Collections' : 'Clone into My Collections'}
+                          onClick={() => {
+                            if (already) return;
+                            const id = Date.now().toString();
+                            const cloned = { id, name:c.name, color:c.color, qIds:[...c.qIds],
+                              queries:[{ text:`lesson:${c.name}`, mode:'add', ts:Date.now() }] };
+                            setColls(prev=>[...prev, cloned]);
+                            setActive(id);
+                            setActiveTab2('mine');
+                          }}>
+                          {already ? '✓ Cloned' : '→ Clone'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── TAB: PRESETS ── */}
+        {activeTab2 === 'presets' && (
+          <div style={{ minHeight:420, overflowY:'auto' }}>
+            <div style={{ fontSize:11, color:'var(--muted)', marginBottom:14, lineHeight:1.6 }}>
+              One-click collection templates based on your current progress. Clicking creates a new collection in <strong>My Collections</strong> and switches to it.
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+              {PRESETS.map(p => {
+                const ids = p.fn();
+                const already = colls.some(x => x.name === p.name);
+                return (
+                  <div key={p.name} style={{ padding:'12px 14px', borderRadius:10,
+                    background:'var(--card2)', border:`1px solid var(--border2)`,
+                    display:'flex', flexDirection:'column', gap:6 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:18 }}>{p.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontWeight:700, fontSize:13 }}>{p.name}</div>
+                        <div style={{ fontSize:11, color:'var(--muted)' }}>{p.desc}</div>
+                      </div>
+                      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2 }}>
+                        <span style={{ fontFamily:'var(--mono)', fontSize:13, fontWeight:700, color: p.color }}>{ids.length}</span>
+                        <span style={{ fontSize:9, color:'var(--muted)' }}>questions</span>
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button className="btn primary" style={{ flex:1, fontSize:11 }}
+                        disabled={ids.length===0}
+                        onClick={() => {
+                          const id = Date.now().toString();
+                          const entry = p.query ? [{ text:p.query, mode:'add', ts:Date.now() }] : [];
+                          setColls(prev=>[...prev, { id, name:p.name, color:p.color, qIds:ids, queries:entry }]);
+                          setActive(id); setActiveTab2('mine');
+                        }}>
+                        {ids.length===0 ? 'No matches' : already ? '+ Duplicate' : '+ Create'}
+                      </button>
+                      {already && (
+                        <button className="btn" style={{ fontSize:11, padding:'4px 10px' }}
+                          title="Refresh existing collection with latest data"
+                          onClick={() => {
+                            setColls(prev=>prev.map(c=>c.name!==p.name?c:{...c, qIds:ids}));
+                            setActiveTab2('mine');
+                          }}>
+                          ↺ Refresh
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -3523,14 +3616,17 @@ function App() {
         const userSets = collectionSets.filter(s=>s.type==='user');
         const editSet = userSets.find(s=>s.id===activeSetId) || userSets[0];
         if (!editSet) return null;
+        const sysSets = collectionSets.filter(s=>s.type!=='user');
         return <CollectionsModal
           questions={questions} collections={editSet.colls} setName={editSet.name}
+          systemSets={sysSets}
           onSave={(newColls,newName)=>{
             setCollectionSets(prev=>prev.map(s=>s.id!==editSet.id?s:{...s,colls:newColls,name:newName||s.name}));
             setShowCollections(false); showToast('Collections saved');
           }}
           onClose={()=>setShowCollections(false)} pinnedIds={pinnedIds} favIds={favIds}
-          completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts))}/>;
+          completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts))}
+          srData={srData} weakIds={weakIds}/>;
       })()}
       {noteModal&&<NoteModal qId={noteModal.qId} question={noteModal.question} noteText={notes[noteModal.qId]||''} onSave={saveNote} onClose={()=>setNoteModal(null)}/>}
       {tagModal&&<TagEditModal qId={tagModal.qId} question={tagModal.question} currentTag={customTags[tagModal.qId]||''} onSave={saveCustomTag} onClose={()=>setTagModal(null)}/>}
