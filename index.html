@@ -762,7 +762,6 @@ function QueryEntryRow({ entry, questions, onRerun, onDelete, onEdit, onLoadToIn
 function CollectionsModal({ questions, collections, setName, systemSets, onSave, onClose, pinnedIds, favIds, completedIds, wrongIds, srData, weakIds }) {
   const [colls, setColls] = useState(() => {
     const c = JSON.parse(JSON.stringify(collections));
-    // ensure every collection has a queries array
     return c.map(col => ({ ...col, queries: col.queries || [] }));
   });
   const [editedSetName, setEditedSetName] = useState(setName||'My Collections');
@@ -772,6 +771,13 @@ function CollectionsModal({ questions, collections, setName, systemSets, onSave,
   // Per-collection query input state
   const [queryInputs, setQueryInputs] = useState({}); // {collId: string}
   const [queryPreviews, setQueryPreviews] = useState({}); // {collId: Set<id>}
+
+  // Auto-save whenever colls or set name changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    onSave(colls, editedSetName, /*silent=*/true);
+  }, [colls, editedSetName]);
 
   const activeCol = colls.find(c => c.id === active);
 
@@ -3620,9 +3626,9 @@ function App() {
         return <CollectionsModal
           questions={questions} collections={editSet.colls} setName={editSet.name}
           systemSets={sysSets}
-          onSave={(newColls,newName)=>{
+          onSave={(newColls,newName,silent)=>{
             setCollectionSets(prev=>prev.map(s=>s.id!==editSet.id?s:{...s,colls:newColls,name:newName||s.name}));
-            setShowCollections(false); showToast('Collections saved');
+            if (!silent) { setShowCollections(false); showToast('Collections saved'); }
           }}
           onClose={()=>setShowCollections(false)} pinnedIds={pinnedIds} favIds={favIds}
           completedIds={completedIds} wrongIds={new Set(Object.keys(wrongCounts))}
