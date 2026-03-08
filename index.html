@@ -195,6 +195,26 @@ mark{background:var(--pg);color:var(--primary);border-radius:3px;padding:0 2px;f
 /* Shortcut panel */
 .sk-row{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
 .sk-row:last-child{border-bottom:none}
+/* TV Mode */
+.tv-overlay{position:fixed;inset:0;z-index:500;background:#000;display:flex;flex-direction:column;overflow:hidden}
+.tv-slide{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 60px;text-align:center;position:relative;overflow:hidden}
+.tv-progress-bar{height:4px;background:rgba(255,255,255,.12);position:relative;flex-shrink:0}
+.tv-progress-fill{height:100%;background:var(--primary);transition:width linear}
+.tv-q-text{font-size:clamp(22px,4vw,46px);font-weight:800;line-height:1.25;color:#fff;max-width:900px;text-shadow:0 2px 20px rgba(0,0,0,.6)}
+.tv-lesson{font-size:clamp(11px,1.5vw,15px);color:rgba(255,255,255,.5);letter-spacing:.12em;text-transform:uppercase;margin-bottom:18px;font-weight:600}
+.tv-option{display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-radius:12px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);font-size:clamp(13px,2vw,20px);color:rgba(255,255,255,.9);text-align:left;transition:all .4s;margin-bottom:10px;max-width:760px;width:100%}
+.tv-option.reveal-correct{border-color:#3ecf8e;background:rgba(62,207,142,.18);color:#3ecf8e;font-weight:700}
+.tv-option.reveal-wrong{opacity:.4}
+.tv-answer-box{margin-top:24px;padding:16px 28px;border-radius:12px;border:2px solid var(--green);background:rgba(62,207,142,.12);color:#3ecf8e;font-size:clamp(16px,2.5vw,24px);font-weight:700;max-width:760px;width:100%}
+.tv-explanation{margin-top:12px;padding:14px 22px;border-radius:10px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);font-size:clamp(12px,1.6vw,17px);font-style:italic;max-width:760px;width:100%;line-height:1.6}
+.tv-controls{display:flex;align-items:center;gap:10px;padding:14px 24px;background:rgba(255,255,255,.04);border-top:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.tv-btn{padding:7px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s}
+.tv-btn:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.35)}
+.tv-btn.primary{background:var(--primary);border-color:var(--primary)}
+.tv-phase-label{position:absolute;top:22px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35);pointer-events:none}
+.tv-slide-num{position:absolute;bottom:12px;right:20px;font-size:11px;color:rgba(255,255,255,.3);font-family:var(--mono)}
+@keyframes tvFadeIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.tv-anim{animation:tvFadeIn .45s ease-out}
 </style>
 </head>
 <body>
@@ -2008,6 +2028,497 @@ function TagFilterPanel({ allTags, restTags, selectedTags, onToggle, onClear, qu
     </div>
   );
 }
+// ═══════════════════════════════ TV LAUNCHER ═══════════════════════════════
+function TVLauncher({ questions, collections, availableLessons, allTags, completedIds, favIds, weakIds,
+                      tvHistory, onSaveHistory, onDeleteHistory, onRenameHistory, onStart, onClose }) {
+
+  const defaultConfig = {
+    name: 'TV Session',
+    // Scope
+    lessons: [],          // [] = all
+    tags: [],             // [] = all
+    qFilter: 'all',       // 'all'|'unsolved'|'done'|'fav'|'weak'
+    searchWord: '',
+    collectionId: null,
+    randomize: true,
+    maxQs: 0,             // 0 = no limit
+    // Content shown per slide
+    showQuestion: true,
+    showOptions: true,
+    showAnswer: true,
+    showExplanation: true,
+    // Timing (seconds)
+    questionTime: 8,
+    optionsTime: 5,
+    answerTime: 6,
+    explanationTime: 5,
+    loop: false,
+  };
+
+  const [cfg, setCfg] = useState(defaultConfig);
+  const [tab, setTab] = useState('settings'); // 'settings' | 'history'
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+
+  const set = (k, v) => setCfg(p => ({...p, [k]: v}));
+
+  const pool = useMemo(() => {
+    let qs = [...questions];
+    if (cfg.collectionId) {
+      const col = collections.find(c => c.id === cfg.collectionId);
+      if (col) qs = qs.filter(q => col.qIds.includes(q.id));
+    }
+    if (cfg.lessons.length > 0) qs = qs.filter(q => cfg.lessons.includes(q.lesson));
+    if (cfg.tags.length > 0) qs = qs.filter(q => {
+      const t = q.tag||''; return cfg.tags.some(tag => t.includes(tag));
+    });
+    if (cfg.searchWord.trim()) {
+      const lo = cfg.searchWord.trim().toLowerCase();
+      qs = qs.filter(q => [q.question,...(q.options||[]),q.answerText||'',q.explanation||''].join(' ').toLowerCase().includes(lo));
+    }
+    if (cfg.qFilter === 'unsolved') qs = qs.filter(q => !completedIds.has(q.id));
+    else if (cfg.qFilter === 'done')    qs = qs.filter(q => completedIds.has(q.id));
+    else if (cfg.qFilter === 'fav')     qs = qs.filter(q => favIds.has(q.id));
+    else if (cfg.qFilter === 'weak')    qs = qs.filter(q => weakIds.has(q.id));
+    if (cfg.randomize) qs = [...qs].sort(() => Math.random() - 0.5);
+    if (cfg.maxQs > 0) qs = qs.slice(0, cfg.maxQs);
+    return qs;
+  }, [questions, collections, completedIds, favIds, weakIds, cfg]);
+
+  const totalSeconds = useMemo(() => {
+    let perQ = 0;
+    if (cfg.showQuestion) perQ += cfg.questionTime;
+    if (cfg.showOptions) perQ += cfg.optionsTime;
+    if (cfg.showAnswer) perQ += cfg.answerTime;
+    if (cfg.showExplanation) perQ += cfg.explanationTime;
+    return pool.length * perQ;
+  }, [pool, cfg]);
+
+  const fmt = (s) => {
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s/60), sec = s%60;
+    return sec > 0 ? `${m}m ${sec}s` : `${m}m`;
+  };
+
+  const handleStart = () => {
+    if (!pool.length) return;
+    const entry = { id: Date.now().toString(), name: cfg.name || 'TV Session', config: cfg, ts: Date.now() };
+    onSaveHistory(entry);
+    onStart({ questions: pool, config: cfg });
+  };
+
+  const loadHistory = (h) => {
+    setCfg({ ...defaultConfig, ...h.config });
+    setTab('settings');
+  };
+
+  const TagChip = ({ tag }) => (
+    <button onClick={() => set('tags', cfg.tags.includes(tag) ? cfg.tags.filter(t=>t!==tag) : [...cfg.tags, tag])}
+      style={{ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:600, cursor:'pointer',
+        border: `1px solid ${cfg.tags.includes(tag) ? 'var(--primary)' : 'var(--border2)'}`,
+        background: cfg.tags.includes(tag) ? 'var(--pg)' : 'var(--card2)',
+        color: cfg.tags.includes(tag) ? 'var(--primary)' : 'var(--muted)' }}>
+      {tag}
+    </button>
+  );
+
+  const TimeInput = ({ label, val, k }) => (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+      <span style={{ fontSize:10, color:'var(--muted)', fontWeight:600, textAlign:'center', lineHeight:1.2 }}>{label}</span>
+      <input type="number" min={2} max={120} value={val} onChange={e=>set(k, Math.max(2,parseInt(e.target.value)||2))}
+        style={{ width:56, textAlign:'center', padding:'5px 4px', borderRadius:6, border:'1px solid var(--border2)',
+          background:'var(--card2)', color:'var(--text)', fontSize:14, fontWeight:700, fontFamily:'var(--mono)' }}/>
+      <span style={{ fontSize:10, color:'var(--muted)' }}>sec</span>
+    </div>
+  );
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{ maxWidth:600 }}>
+        {/* Header */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <div style={{ fontWeight:800, fontSize:17, display:'flex', alignItems:'center', gap:8 }}>
+            📺
+            <input value={cfg.name} onChange={e=>set('name',e.target.value)}
+              style={{ background:'transparent', border:'none', outline:'none', fontWeight:800, fontSize:17,
+                color:'var(--text)', fontFamily:'var(--font)', borderBottom:'1px dashed var(--border2)',
+                paddingBottom:1, minWidth:60, maxWidth:220 }}
+              placeholder="Session name…"/>
+          </div>
+          <button className="btn ghost" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:2, borderBottom:'1px solid var(--border)', marginBottom:16 }}>
+          {[['settings','⚙ Settings'],['history',`🕒 History (${tvHistory.length})`]].map(([id,label])=>(
+            <button key={id} onClick={()=>setTab(id)}
+              style={{ padding:'6px 14px', fontSize:12, fontWeight:700, border:'none', cursor:'pointer', background:'none',
+                borderBottom: tab===id ? '2px solid var(--primary)' : '2px solid transparent',
+                color: tab===id ? 'var(--primary)' : 'var(--muted)', marginBottom:-1 }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'settings' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+
+            {/* Question filter */}
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--muted)', marginBottom:7 }}>Question Filter</div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+                {[['all','All'],['unsolved','○ Unsolved'],['done','✓ Done'],['fav','★ Fav'],['weak','⚡ Weak']].map(([id,label])=>(
+                  <button key={id} onClick={()=>set('qFilter',id)}
+                    style={{ padding:'4px 12px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer',
+                      border:`1px solid ${cfg.qFilter===id?'var(--primary)':'var(--border2)'}`,
+                      background:cfg.qFilter===id?'var(--pg)':'var(--card2)',
+                      color:cfg.qFilter===id?'var(--primary)':'var(--muted)' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <input className="input" placeholder="Search word filter…" value={cfg.searchWord}
+                onChange={e=>set('searchWord',e.target.value)} style={{ marginBottom:6 }}/>
+            </div>
+
+            {/* Lessons */}
+            {availableLessons.length > 0 && (
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--muted)', marginBottom:7 }}>
+                  Lessons <span style={{fontWeight:400,textTransform:'none'}}>(empty = all)</span>
+                </div>
+                <div style={{ display:'flex', gap:5, flexWrap:'wrap', maxHeight:80, overflowY:'auto' }}>
+                  {availableLessons.filter(l=>l&&l!=='General').map(l => (
+                    <button key={l} onClick={()=>set('lessons', cfg.lessons.includes(l)?cfg.lessons.filter(x=>x!==l):[...cfg.lessons,l])}
+                      style={{ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:600, cursor:'pointer',
+                        border:`1px solid ${cfg.lessons.includes(l)?'var(--green)':'var(--border2)'}`,
+                        background:cfg.lessons.includes(l)?'var(--gg)':'var(--card2)',
+                        color:cfg.lessons.includes(l)?'var(--green)':'var(--muted)' }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tags */}
+            {(allTags?.tags||[]).filter(t=>t!=='__REST__').length > 0 && (
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--muted)', marginBottom:7 }}>
+                  Tags <span style={{fontWeight:400,textTransform:'none'}}>(empty = all)</span>
+                </div>
+                <div style={{ display:'flex', gap:5, flexWrap:'wrap', maxHeight:70, overflowY:'auto' }}>
+                  {(allTags?.tags||[]).filter(t=>t!=='__REST__').map(t=><TagChip key={t} tag={t}/>)}
+                </div>
+              </div>
+            )}
+
+            {/* What to show per slide */}
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--muted)', marginBottom:7 }}>Show Per Slide</div>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                {[['showQuestion','❓ Question'],['showOptions','☑ Options'],['showAnswer','✓ Answer'],['showExplanation','📖 Explanation']].map(([k,label])=>(
+                  <label key={k} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8, cursor:'pointer',
+                    border:`1px solid ${cfg[k]?'var(--primary)':'var(--border2)'}`,
+                    background:cfg[k]?'var(--pg)':'var(--card2)', fontSize:12, fontWeight:600,
+                    color:cfg[k]?'var(--primary)':'var(--muted)' }}>
+                    <input type="checkbox" checked={cfg[k]} onChange={e=>set(k,e.target.checked)} style={{accentColor:'var(--primary)'}}/>
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Timing */}
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--muted)', marginBottom:10 }}>
+                Slide Duration (seconds)
+              </div>
+              <div style={{ display:'flex', gap:20, flexWrap:'wrap' }}>
+                {cfg.showQuestion    && <TimeInput label="Question" val={cfg.questionTime}    k="questionTime"/>}
+                {cfg.showOptions     && <TimeInput label="Options"  val={cfg.optionsTime}     k="optionsTime"/>}
+                {cfg.showAnswer      && <TimeInput label="Answer"   val={cfg.answerTime}      k="answerTime"/>}
+                {cfg.showExplanation && <TimeInput label="Explanation" val={cfg.explanationTime} k="explanationTime"/>}
+              </div>
+            </div>
+
+            {/* Misc */}
+            <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+              <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, cursor:'pointer', color:'var(--text)' }}>
+                <input type="checkbox" checked={cfg.randomize} onChange={e=>set('randomize',e.target.checked)} style={{accentColor:'var(--primary)'}}/>
+                Randomize order
+              </label>
+              <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, cursor:'pointer', color:'var(--text)' }}>
+                <input type="checkbox" checked={cfg.loop} onChange={e=>set('loop',e.target.checked)} style={{accentColor:'var(--primary)'}}/>
+                Loop
+              </label>
+              <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:13 }}>
+                <span style={{color:'var(--muted)'}}>Max Qs:</span>
+                <input type="number" min={0} value={cfg.maxQs} onChange={e=>set('maxQs',Math.max(0,parseInt(e.target.value)||0))}
+                  style={{ width:60, textAlign:'center', padding:'4px', borderRadius:6, border:'1px solid var(--border2)',
+                    background:'var(--card2)', color:'var(--text)', fontSize:13, fontFamily:'var(--mono)' }}/>
+                <span style={{color:'var(--muted)',fontSize:11}}>(0=all)</span>
+              </div>
+            </div>
+
+            {/* Summary + Start */}
+            <div style={{ background:'var(--card2)', border:'1px solid var(--border2)', borderRadius:10, padding:'12px 16px',
+              display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700 }}>
+                  {pool.length > 0 ? <><span style={{color:'var(--primary)',fontSize:20}}>{pool.length}</span> questions</> : <span style={{color:'var(--red)'}}>No questions match</span>}
+                </div>
+                {pool.length > 0 && (
+                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>
+                    Total runtime ~<strong style={{color:'var(--text)'}}>{fmt(totalSeconds)}</strong>
+                  </div>
+                )}
+              </div>
+              <button className="btn primary" style={{ fontSize:14, padding:'9px 24px' }}
+                onClick={handleStart} disabled={pool.length === 0}>
+                ▶ Start TV
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'history' && (
+          <div style={{ minHeight:300 }}>
+            {tvHistory.length === 0 ? (
+              <div style={{ textAlign:'center', padding:60, color:'var(--muted)', fontSize:13 }}>
+                No history yet. Run a TV session to save settings here.
+              </div>
+            ) : tvHistory.map(h => (
+              <div key={h.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px',
+                background:'var(--card2)', border:'1px solid var(--border)', borderRadius:8, marginBottom:6 }}>
+                {editingId === h.id ? (
+                  <input autoFocus value={editName} onChange={e=>setEditName(e.target.value)}
+                    onBlur={()=>{onRenameHistory(h.id,editName.trim()||h.name);setEditingId(null);}}
+                    onKeyDown={e=>{if(e.key==='Enter'){onRenameHistory(h.id,editName.trim()||h.name);setEditingId(null);}if(e.key==='Escape')setEditingId(null);}}
+                    style={{ flex:1, background:'var(--card)', border:'1px solid var(--primary)', borderRadius:5,
+                      padding:'3px 8px', color:'var(--text)', fontSize:13, fontFamily:'var(--font)', outline:'none' }}/>
+                ) : (
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, fontSize:13 }}>{h.name}</div>
+                    <div style={{ fontSize:11, color:'var(--muted)' }}>
+                      {new Date(h.ts).toLocaleString()} ·{' '}
+                      {h.config?.qFilter||'all'} · {h.config?.lessons?.length>0?h.config.lessons.slice(0,2).join(', '):'all lessons'}
+                    </div>
+                  </div>
+                )}
+                <button className="tv-btn" style={{fontSize:11,padding:'4px 10px'}} onClick={()=>{setEditingId(h.id);setEditName(h.name);}} title="Rename">✎</button>
+                <button className="btn primary" style={{fontSize:11,padding:'4px 10px'}} onClick={()=>loadHistory(h)}>Load</button>
+                <button className="btn" style={{fontSize:11,padding:'4px 10px',color:'var(--red)',borderColor:'var(--red)'}} onClick={()=>onDeleteHistory(h.id)}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════ TV PLAYER ═══════════════════════════════
+function TVPlayer({ session, onClose }) {
+  const { questions: deck, config: cfg } = session;
+
+  // Build phases for a single question
+  const buildPhases = (q, cfg) => {
+    const phases = [];
+    if (cfg.showQuestion) phases.push({ type:'question', dur: cfg.questionTime });
+    if (cfg.showOptions && q.options?.length > 0) phases.push({ type:'options', dur: cfg.optionsTime });
+    if (cfg.showAnswer) phases.push({ type:'answer', dur: cfg.answerTime });
+    if (cfg.showExplanation && q.explanation) phases.push({ type:'explanation', dur: cfg.explanationTime });
+    if (phases.length === 0) phases.push({ type:'question', dur: cfg.questionTime || 8 });
+    return phases;
+  };
+
+  const [qIdx, setQIdx] = useState(0);
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [paused, setPaused] = useState(false);
+  const [done, setDone] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
+
+  const q = deck[qIdx];
+  const phases = useMemo(() => q ? buildPhases(q, cfg) : [], [qIdx, deck, cfg]);
+  const phase = phases[phaseIdx];
+
+  // Init time when phase changes
+  useEffect(() => {
+    if (!phase) return;
+    setTimeLeft(phase.dur);
+    setAnimKey(k => k+1);
+  }, [qIdx, phaseIdx]);
+
+  // Countdown
+  useEffect(() => {
+    if (paused || done || timeLeft === null) return;
+    if (timeLeft <= 0) { advance(); return; }
+    const t = setTimeout(() => setTimeLeft(tl => tl - 1), 1000);
+    return () => clearTimeout(t);
+  }, [timeLeft, paused, done]);
+
+  const advance = () => {
+    if (phaseIdx + 1 < phases.length) {
+      setPhaseIdx(p => p + 1);
+    } else if (qIdx + 1 < deck.length) {
+      setQIdx(i => i+1);
+      setPhaseIdx(0);
+    } else if (cfg.loop) {
+      setQIdx(0);
+      setPhaseIdx(0);
+    } else {
+      setDone(true);
+    }
+  };
+
+  const retreat = () => {
+    if (phaseIdx > 0) { setPhaseIdx(p=>p-1); }
+    else if (qIdx > 0) { setQIdx(i=>i-1); setPhaseIdx(0); }
+  };
+
+  // Keyboard
+  useEffect(() => {
+    const fn = e => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === ' ') { e.preventDefault(); setPaused(p=>!p); }
+      if (e.key === 'ArrowRight' || e.key === 'l') advance();
+      if (e.key === 'ArrowLeft'  || e.key === 'h') retreat();
+    };
+    window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, [phaseIdx, qIdx, phases, deck, cfg]);
+
+  if (!q) return null;
+
+  const totalPhases = deck.reduce((s, qq) => s + buildPhases(qq, cfg).length, 0);
+  const donePhases = deck.slice(0, qIdx).reduce((s, qq) => s + buildPhases(qq, cfg).length, 0) + phaseIdx;
+  const overallPct = totalPhases > 0 ? (donePhases / totalPhases) * 100 : 0;
+  const phasePct = phase ? ((phase.dur - timeLeft) / phase.dur) * 100 : 100;
+
+  const phaseLabels = { question:'Question', options:'Options', answer:'Answer', explanation:'Explanation' };
+
+  // Background gradient per phase
+  const bgGradients = {
+    question:    'radial-gradient(ellipse at 60% 40%, #0d1a3a 0%, #050a14 70%)',
+    options:     'radial-gradient(ellipse at 40% 60%, #0a1a2a 0%, #050a14 70%)',
+    answer:      'radial-gradient(ellipse at 50% 30%, #0a2a1a 0%, #050a14 70%)',
+    explanation: 'radial-gradient(ellipse at 50% 70%, #1a0a2a 0%, #050a14 70%)',
+  };
+
+  if (done) return (
+    <div className="tv-overlay" style={{ alignItems:'center', justifyContent:'center', background:'#050a14' }}>
+      <div style={{ textAlign:'center', color:'#fff', padding:40 }}>
+        <div style={{ fontSize:64, marginBottom:20 }}>🎬</div>
+        <div style={{ fontSize:36, fontWeight:800, marginBottom:12 }}>That's a wrap!</div>
+        <div style={{ fontSize:18, color:'rgba(255,255,255,.5)', marginBottom:32 }}>{deck.length} questions covered</div>
+        <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
+          {cfg.loop && <button className="tv-btn primary" onClick={()=>{setQIdx(0);setPhaseIdx(0);setDone(false);}}>↺ Replay</button>}
+          <button className="tv-btn primary" onClick={()=>{setQIdx(0);setPhaseIdx(0);setDone(false);}}>↺ Replay</button>
+          <button className="tv-btn" onClick={onClose}>✕ Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="tv-overlay">
+      {/* Overall progress bar */}
+      <div className="tv-progress-bar">
+        <div className="tv-progress-fill" style={{ width:`${overallPct}%`, transition:'width .5s linear' }}/>
+      </div>
+
+      {/* Slide */}
+      <div className="tv-slide" style={{ background: bgGradients[phase?.type] || bgGradients.question }} key={animKey}>
+        <div className="tv-phase-label">{phaseLabels[phase?.type] || ''}</div>
+
+        {/* Q number + lesson */}
+        <div className="tv-lesson">
+          Q{qNum(q.id)}{q.lesson && q.lesson !== 'General' ? ` · ${q.lesson}` : ''}
+        </div>
+
+        {/* Question */}
+        <div className="tv-q-text tv-anim" key={`q-${qIdx}`}>
+          {q.question}
+        </div>
+
+        {/* Options (shown from 'options' phase onward) */}
+        {(phase?.type === 'options' || phase?.type === 'answer' || phase?.type === 'explanation') &&
+          q.options?.length > 0 && (
+          <div style={{ marginTop:24, width:'100%', maxWidth:760 }} className="tv-anim">
+            {q.options.map((opt, oi) => {
+              const letter = String.fromCharCode(65+oi);
+              const isCorrect = q.answerKey && q.answerKey.toUpperCase() === letter;
+              const showReveal = phase?.type === 'answer' || phase?.type === 'explanation';
+              return (
+                <div key={oi} className={`tv-option ${showReveal ? (isCorrect?'reveal-correct':'reveal-wrong') : ''}`}>
+                  <span style={{ fontWeight:800, minWidth:28, fontSize:'inherit' }}>{letter})</span>
+                  {opt}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Answer box (no options case) */}
+        {(phase?.type === 'answer' || phase?.type === 'explanation') && !q.options?.length && (
+          <div className="tv-answer-box tv-anim">
+            ✓ {q.answerKey ? `${q.answerKey} — ` : ''}{q.answerText}
+          </div>
+        )}
+
+        {/* Explanation */}
+        {phase?.type === 'explanation' && q.explanation && (
+          <div className="tv-explanation tv-anim">
+            {q.explanation}
+          </div>
+        )}
+
+        {/* Slide timer arc */}
+        <div style={{ position:'absolute', bottom:20, left:28 }}>
+          <svg width={44} height={44} viewBox="0 0 44 44">
+            <circle cx={22} cy={22} r={18} fill="none" stroke="rgba(255,255,255,.12)" strokeWidth={3}/>
+            <circle cx={22} cy={22} r={18} fill="none" stroke="var(--primary)" strokeWidth={3}
+              strokeDasharray={`${2*Math.PI*18}`}
+              strokeDashoffset={`${2*Math.PI*18*(1-phasePct/100)}`}
+              strokeLinecap="round"
+              style={{ transform:'rotate(-90deg)', transformOrigin:'22px 22px', transition:'stroke-dashoffset 1s linear' }}/>
+            <text x={22} y={27} textAnchor="middle" fill="rgba(255,255,255,.7)" fontSize={12} fontFamily="monospace" fontWeight={700}>
+              {timeLeft}
+            </text>
+          </svg>
+        </div>
+
+        <div className="tv-slide-num">{qIdx+1} / {deck.length}</div>
+      </div>
+
+      {/* Phase progress dots */}
+      <div style={{ display:'flex', justifyContent:'center', gap:8, padding:'8px 0', background:'rgba(0,0,0,.3)' }}>
+        {phases.map((ph, i) => (
+          <div key={i} style={{ width: i===phaseIdx?24:8, height:8, borderRadius:4, transition:'all .3s',
+            background: i < phaseIdx ? 'var(--green)' : i === phaseIdx ? 'var(--primary)' : 'rgba(255,255,255,.2)' }}/>
+        ))}
+      </div>
+
+      {/* Controls bar */}
+      <div className="tv-controls">
+        <button className="tv-btn" onClick={retreat} title="Previous (←)">◀</button>
+        <button className="tv-btn primary" onClick={()=>setPaused(p=>!p)} title="Play/Pause (Space)" style={{ minWidth:80 }}>
+          {paused ? '▶ Play' : '⏸ Pause'}
+        </button>
+        <button className="tv-btn" onClick={advance} title="Next (→)">▶</button>
+        <div style={{ flex:1 }}/>
+        <div style={{ color:'rgba(255,255,255,.5)', fontSize:12, fontFamily:'var(--mono)' }}>
+          {phaseLabels[phase?.type]} · {timeLeft}s left
+        </div>
+        <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 8px' }}/>
+        <button className="tv-btn" onClick={onClose} title="Exit (Esc)" style={{ color:'rgba(255,255,255,.5)' }}>✕ Exit</button>
+      </div>
+    </div>
+  );
+}
+
 function ExamLauncher({ questions, collections, completedIds, wrongCounts, onStart, onClose }) {
   const [excludeSolved, setExcludeSolved] = useState(true);
   const [scopeMode, setScopeMode] = useState('all'); // 'all' | 'collection' | 'weak'
@@ -2214,6 +2725,9 @@ function App() {
   const [examCustomPool, setExamCustomPool] = useState(null); // custom pool from ExamLauncher
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
+  const [showTVLauncher, setShowTVLauncher] = useState(false);
+  const [tvSession, setTvSession] = useState(null); // active TV session config + questions
+  const [tvHistory, setTvHistory] = useState(() => load('tvHistory', [])); // [{id,name,config,ts}]
   const [noteModal, setNoteModal] = useState(null);
   const [tagModal, setTagModal] = useState(null);
   const [localAnsOverrides, setLocalAnsOverrides] = useState({}); // {qId: true|false}
@@ -2252,6 +2766,7 @@ function App() {
   useEffect(()=>save('sr',srData,fileKey),[srData,fileKey]);
   useEffect(()=>save('wrong',wrongCounts,fileKey),[wrongCounts,fileKey]);
   useEffect(()=>save('collectionSets',collectionSets,fileKey),[collectionSets,fileKey]);
+  useEffect(()=>save('tvHistory',tvHistory),[tvHistory]);
   useEffect(()=>save('sessions',sessions),[sessions]);
   useEffect(()=>save('display',displaySettings),[displaySettings]);
   useEffect(()=>save('compact',compact),[compact]);
@@ -3204,6 +3719,7 @@ function App() {
                 <button className="btn primary" onClick={()=>{setPracticeMode('practice');setShowPractice(true);}} style={{padding:'6px 10px'}}><I.Brain/> Practice</button>
                 <button className="btn primary" onClick={()=>setShowExamLauncher(true)} style={{padding:'6px 10px',fontSize:11}}>📝 Exam</button>
                 {wrongPool.length>0&&<button className="btn danger" onClick={()=>{setPracticeMode('wrong');setShowPractice(true);}} style={{padding:'6px 10px',fontSize:11}}>❌ Wrong</button>}
+                <button className="btn" onClick={()=>setShowTVLauncher(true)} style={{padding:'6px 10px',fontSize:11}} title="TV Show Mode — auto-advancing slideshow">📺 TV</button>
               </div>
             )}
           </>}
@@ -3618,6 +4134,21 @@ function App() {
         />
       )}
       {showShortcuts&&<ShortcutsPanel onClose={()=>setShowShortcuts(false)}/>}
+      {showTVLauncher&&<TVLauncher
+        questions={questions} collections={collections}
+        availableLessons={availableLessons} allTags={allTags}
+        completedIds={completedIds} favIds={favIds} weakIds={weakIds}
+        tvHistory={tvHistory}
+        onSaveHistory={(entry)=>setTvHistory(prev=>[entry,...prev.filter(h=>h.id!==entry.id)].slice(0,20))}
+        onDeleteHistory={(id)=>setTvHistory(prev=>prev.filter(h=>h.id!==id))}
+        onRenameHistory={(id,name)=>setTvHistory(prev=>prev.map(h=>h.id===id?{...h,name}:h))}
+        onStart={(sess)=>{setTvSession(sess);setShowTVLauncher(false);}}
+        onClose={()=>setShowTVLauncher(false)}
+      />}
+      {tvSession&&<TVPlayer
+        session={tvSession}
+        onClose={()=>setTvSession(null)}
+      />}
       {showCollections&&(()=>{
         const userSets = collectionSets.filter(s=>s.type==='user');
         const editSet = userSets.find(s=>s.id===activeSetId) || userSets[0];
