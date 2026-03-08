@@ -197,7 +197,7 @@ mark{background:var(--pg);color:var(--primary);border-radius:3px;padding:0 2px;f
 .sk-row:last-child{border-bottom:none}
 /* TV Mode */
 .tv-overlay{position:fixed;inset:0;z-index:500;background:#000;display:flex;flex-direction:column;overflow:hidden}
-.tv-slide{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 60px;text-align:center;position:relative;overflow:hidden}
+.tv-slide{flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 60px 24px;text-align:center;position:relative;overflow-y:auto;scroll-behavior:smooth}
 .tv-progress-bar{height:4px;background:rgba(255,255,255,.12);position:relative;flex-shrink:0}
 .tv-progress-fill{height:100%;background:var(--primary);transition:width linear}
 .tv-q-text{font-size:clamp(22px,4vw,46px);font-weight:800;line-height:1.25;color:#fff;max-width:900px;text-shadow:0 2px 20px rgba(0,0,0,.6)}
@@ -2319,10 +2319,9 @@ function TVLauncher({ questions, collections, availableLessons, allTags, complet
 }
 
 // ═══════════════════════════════ TV PLAYER ═══════════════════════════════
-function TVPlayer({ session, onClose }) {
+function TVPlayer({ session, favIds, completedIds, onToggleFav, onToggleDone, onClose }) {
   const { questions: deck, config: cfg } = session;
 
-  // Build phases for a single question
   const buildPhases = (q, cfg) => {
     const phases = [];
     if (cfg.showQuestion) phases.push({ type:'question', dur: cfg.questionTime });
@@ -2333,79 +2332,115 @@ function TVPlayer({ session, onClose }) {
     return phases;
   };
 
-  const [qIdx, setQIdx] = useState(0);
+  const [qIdx, setQIdx]       = useState(0);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(null);
-  const [paused, setPaused] = useState(false);
-  const [done, setDone] = useState(false);
+  const [paused, setPaused]   = useState(false);
+  const [done, setDone]       = useState(false);
   const [animKey, setAnimKey] = useState(0);
+  const [fontSize, setFontSize] = useState(100); // percentage, 60–180
+  const [localFavs, setLocalFavs]   = useState(() => new Set(favIds));
+  const [localDone, setLocalDone]   = useState(() => new Set(completedIds));
+  const [actionFlash, setActionFlash] = useState(null); // {text, color}
+  const slideRef = useRef(null);
 
-  const q = deck[qIdx];
-  const phases = useMemo(() => q ? buildPhases(q, cfg) : [], [qIdx, deck, cfg]);
-  const phase = phases[phaseIdx];
+  const q     = deck[qIdx];
+  const phases = useMemo(() => q ? buildPhases(q, cfg) : [], [qIdx]);
+  const phase  = phases[phaseIdx];
 
-  // Init time when phase changes
+  // Reset slide scroll + timer on phase/q change
   useEffect(() => {
     if (!phase) return;
     setTimeLeft(phase.dur);
-    setAnimKey(k => k+1);
+    setAnimKey(k => k + 1);
+    if (slideRef.current) slideRef.current.scrollTop = 0;
   }, [qIdx, phaseIdx]);
 
   // Countdown
   useEffect(() => {
-    if (paused || done || timeLeft === null) return;
-    if (timeLeft <= 0) { advance(); return; }
+    if (paused || done || timeLeft === null || timeLeft <= 0) {
+      if (timeLeft === 0) advance();
+      return;
+    }
     const t = setTimeout(() => setTimeLeft(tl => tl - 1), 1000);
     return () => clearTimeout(t);
   }, [timeLeft, paused, done]);
 
+  const flash = (text, color='#3ecf8e') => {
+    setActionFlash({ text, color });
+    setTimeout(() => setActionFlash(null), 1200);
+  };
+
   const advance = () => {
-    if (phaseIdx + 1 < phases.length) {
-      setPhaseIdx(p => p + 1);
-    } else if (qIdx + 1 < deck.length) {
-      setQIdx(i => i+1);
-      setPhaseIdx(0);
-    } else if (cfg.loop) {
-      setQIdx(0);
-      setPhaseIdx(0);
-    } else {
-      setDone(true);
-    }
+    if (phaseIdx + 1 < phases.length) { setPhaseIdx(p => p + 1); }
+    else if (qIdx + 1 < deck.length)  { setQIdx(i => i + 1); setPhaseIdx(0); }
+    else if (cfg.loop)                 { setQIdx(0); setPhaseIdx(0); }
+    else                               { setDone(true); }
   };
 
   const retreat = () => {
-    if (phaseIdx > 0) { setPhaseIdx(p=>p-1); }
-    else if (qIdx > 0) { setQIdx(i=>i-1); setPhaseIdx(0); }
+    if (phaseIdx > 0)    { setPhaseIdx(p => p - 1); }
+    else if (qIdx > 0)   { setQIdx(i => i - 1); setPhaseIdx(0); }
   };
 
-  // Keyboard
+  const changeFontSize = (delta) => setFontSize(s => Math.min(180, Math.max(60, s + delta)));
+
+  const toggleFav = () => {
+    if (!q) return;
+    onToggleFav(q.id);
+    setLocalFavs(prev => { const n = new Set(prev); n.has(q.id) ? n.delete(q.id) : n.add(q.id); return n; });
+    flash(localFavs.has(q.id) ? '★ Removed from Fav' : '★ Added to Fav', '#f5a623');
+  };
+
+  const toggleDone = () => {
+    if (!q) return;
+    onToggleDone(q.id);
+    setLocalDone(prev => { const n = new Set(prev); n.has(q.id) ? n.delete(q.id) : n.add(q.id); return n; });
+    flash(localDone.has(q.id) ? '○ Marked Unsolved' : '✓ Marked Done', '#3ecf8e');
+  };
+
+  // Keyboard shortcuts
   useEffect(() => {
     const fn = e => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === ' ') { e.preventDefault(); setPaused(p=>!p); }
-      if (e.key === 'ArrowRight' || e.key === 'l') advance();
-      if (e.key === 'ArrowLeft'  || e.key === 'h') retreat();
+      if (e.key === 'Escape')                                 { onClose(); return; }
+      if (e.key === ' ')                                      { e.preventDefault(); setPaused(p => !p); return; }
+      if (e.key === 'ArrowRight' || e.key === 'l')           { advance(); return; }
+      if (e.key === 'ArrowLeft'  || e.key === 'h')           { retreat(); return; }
+      if (e.key === 'ArrowUp'    || e.key === '=')           { e.preventDefault(); changeFontSize(+10); return; }
+      if (e.key === 'ArrowDown'  || e.key === '-')           { e.preventDefault(); changeFontSize(-10); return; }
+      if (e.key === '0')                                      { setFontSize(100); return; }
+      if (e.key === 'f' || e.key === 'F')                    { toggleFav(); return; }
+      if (e.key === 'd' || e.key === 'D')                    { toggleDone(); return; }
+      // Scroll slide content manually when paused
+      if (e.key === 'PageDown' || e.key === 'j') {
+        if (slideRef.current) slideRef.current.scrollTop += 120;
+      }
+      if (e.key === 'PageUp' || e.key === 'k') {
+        if (slideRef.current) slideRef.current.scrollTop -= 120;
+      }
     };
     window.addEventListener('keydown', fn);
     return () => window.removeEventListener('keydown', fn);
-  }, [phaseIdx, qIdx, phases, deck, cfg]);
+  }, [phaseIdx, qIdx, phases, deck, cfg, localFavs, localDone]);
 
   if (!q) return null;
 
   const totalPhases = deck.reduce((s, qq) => s + buildPhases(qq, cfg).length, 0);
-  const donePhases = deck.slice(0, qIdx).reduce((s, qq) => s + buildPhases(qq, cfg).length, 0) + phaseIdx;
-  const overallPct = totalPhases > 0 ? (donePhases / totalPhases) * 100 : 0;
-  const phasePct = phase ? ((phase.dur - timeLeft) / phase.dur) * 100 : 100;
+  const donePhases  = deck.slice(0, qIdx).reduce((s, qq) => s + buildPhases(qq, cfg).length, 0) + phaseIdx;
+  const overallPct  = totalPhases > 0 ? (donePhases / totalPhases) * 100 : 0;
+  const phasePct    = phase && timeLeft !== null ? ((phase.dur - timeLeft) / phase.dur) * 100 : 0;
 
   const phaseLabels = { question:'Question', options:'Options', answer:'Answer', explanation:'Explanation' };
-
-  // Background gradient per phase
   const bgGradients = {
     question:    'radial-gradient(ellipse at 60% 40%, #0d1a3a 0%, #050a14 70%)',
     options:     'radial-gradient(ellipse at 40% 60%, #0a1a2a 0%, #050a14 70%)',
     answer:      'radial-gradient(ellipse at 50% 30%, #0a2a1a 0%, #050a14 70%)',
     explanation: 'radial-gradient(ellipse at 50% 70%, #1a0a2a 0%, #050a14 70%)',
   };
+
+  const isFav  = localFavs.has(q.id);
+  const isDone = localDone.has(q.id);
+  const scale  = fontSize / 100;
 
   if (done) return (
     <div className="tv-overlay" style={{ alignItems:'center', justifyContent:'center', background:'#050a14' }}>
@@ -2414,7 +2449,6 @@ function TVPlayer({ session, onClose }) {
         <div style={{ fontSize:36, fontWeight:800, marginBottom:12 }}>That's a wrap!</div>
         <div style={{ fontSize:18, color:'rgba(255,255,255,.5)', marginBottom:32 }}>{deck.length} questions covered</div>
         <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
-          {cfg.loop && <button className="tv-btn primary" onClick={()=>{setQIdx(0);setPhaseIdx(0);setDone(false);}}>↺ Replay</button>}
           <button className="tv-btn primary" onClick={()=>{setQIdx(0);setPhaseIdx(0);setDone(false);}}>↺ Replay</button>
           <button className="tv-btn" onClick={onClose}>✕ Close</button>
         </div>
@@ -2429,59 +2463,88 @@ function TVPlayer({ session, onClose }) {
         <div className="tv-progress-fill" style={{ width:`${overallPct}%`, transition:'width .5s linear' }}/>
       </div>
 
-      {/* Slide */}
-      <div className="tv-slide" style={{ background: bgGradients[phase?.type] || bgGradients.question }} key={animKey}>
+      {/* Slide — scrollable */}
+      <div ref={slideRef} className="tv-slide"
+        style={{ background: bgGradients[phase?.type] || bgGradients.question, overflowY:'auto' }}
+        key={animKey}>
+
+        {/* Phase label top-center */}
         <div className="tv-phase-label">{phaseLabels[phase?.type] || ''}</div>
 
-        {/* Q number + lesson */}
-        <div className="tv-lesson">
-          Q{qNum(q.id)}{q.lesson && q.lesson !== 'General' ? ` · ${q.lesson}` : ''}
+        {/* Status badges top-right */}
+        <div style={{ position:'absolute', top:16, right:20, display:'flex', gap:8 }}>
+          {isDone && <span style={{ fontSize:12, fontWeight:700, padding:'3px 8px', borderRadius:99,
+            background:'rgba(62,207,142,.25)', color:'#3ecf8e', border:'1px solid #3ecf8e44' }}>✓ Done</span>}
+          {isFav  && <span style={{ fontSize:12, fontWeight:700, padding:'3px 8px', borderRadius:99,
+            background:'rgba(245,166,35,.25)', color:'#f5a623', border:'1px solid #f5a62344' }}>★ Fav</span>}
         </div>
 
-        {/* Question */}
-        <div className="tv-q-text tv-anim" key={`q-${qIdx}`}>
-          {q.question}
+        {/* Action flash overlay */}
+        {actionFlash && (
+          <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
+            fontSize:28, fontWeight:800, color:actionFlash.color,
+            background:'rgba(0,0,0,.7)', padding:'14px 32px', borderRadius:14,
+            border:`2px solid ${actionFlash.color}44`, pointerEvents:'none',
+            animation:'tvFadeIn .15s ease-out', whiteSpace:'nowrap', zIndex:10 }}>
+            {actionFlash.text}
+          </div>
+        )}
+
+        {/* Content wrapper with font scale */}
+        <div style={{ width:'100%', maxWidth:860, display:'flex', flexDirection:'column', alignItems:'center',
+          gap:0, paddingBottom:20 }}>
+
+          {/* Q number + lesson */}
+          <div className="tv-lesson" style={{ fontSize: `${13*scale}px` }}>
+            Q{qNum(q.id)}{q.lesson && q.lesson !== 'General' ? ` · ${q.lesson}` : ''}
+          </div>
+
+          {/* Question text */}
+          <div className="tv-q-text tv-anim" style={{ fontSize:`${Math.round(32*scale)}px` }} key={`q-${qIdx}`}>
+            {q.question}
+          </div>
+
+          {/* Options */}
+          {(phase?.type === 'options' || phase?.type === 'answer' || phase?.type === 'explanation') &&
+            q.options?.length > 0 && (
+            <div style={{ marginTop:20, width:'100%' }} className="tv-anim">
+              {q.options.map((opt, oi) => {
+                const letter = String.fromCharCode(65+oi);
+                const isCorrect = q.answerKey && q.answerKey.toUpperCase() === letter;
+                const showReveal = phase?.type === 'answer' || phase?.type === 'explanation';
+                return (
+                  <div key={oi} className={`tv-option ${showReveal ? (isCorrect?'reveal-correct':'reveal-wrong') : ''}`}
+                    style={{ fontSize:`${Math.round(17*scale)}px`, marginBottom:`${8*scale}px` }}>
+                    <span style={{ fontWeight:800, minWidth:`${28*scale}px`, fontSize:'inherit', flexShrink:0 }}>{letter})</span>
+                    {opt}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Answer box (no options) */}
+          {(phase?.type === 'answer' || phase?.type === 'explanation') && !q.options?.length && (
+            <div className="tv-answer-box tv-anim" style={{ fontSize:`${Math.round(20*scale)}px`, marginTop:20 }}>
+              ✓ {q.answerKey ? `${q.answerKey} — ` : ''}{q.answerText}
+            </div>
+          )}
+
+          {/* Explanation */}
+          {phase?.type === 'explanation' && q.explanation && (
+            <div className="tv-explanation tv-anim" style={{ fontSize:`${Math.round(15*scale)}px`, marginTop:10 }}>
+              {q.explanation}
+            </div>
+          )}
         </div>
 
-        {/* Options (shown from 'options' phase onward) */}
-        {(phase?.type === 'options' || phase?.type === 'answer' || phase?.type === 'explanation') &&
-          q.options?.length > 0 && (
-          <div style={{ marginTop:24, width:'100%', maxWidth:760 }} className="tv-anim">
-            {q.options.map((opt, oi) => {
-              const letter = String.fromCharCode(65+oi);
-              const isCorrect = q.answerKey && q.answerKey.toUpperCase() === letter;
-              const showReveal = phase?.type === 'answer' || phase?.type === 'explanation';
-              return (
-                <div key={oi} className={`tv-option ${showReveal ? (isCorrect?'reveal-correct':'reveal-wrong') : ''}`}>
-                  <span style={{ fontWeight:800, minWidth:28, fontSize:'inherit' }}>{letter})</span>
-                  {opt}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Answer box (no options case) */}
-        {(phase?.type === 'answer' || phase?.type === 'explanation') && !q.options?.length && (
-          <div className="tv-answer-box tv-anim">
-            ✓ {q.answerKey ? `${q.answerKey} — ` : ''}{q.answerText}
-          </div>
-        )}
-
-        {/* Explanation */}
-        {phase?.type === 'explanation' && q.explanation && (
-          <div className="tv-explanation tv-anim">
-            {q.explanation}
-          </div>
-        )}
-
-        {/* Slide timer arc */}
-        <div style={{ position:'absolute', bottom:20, left:28 }}>
+        {/* Timer arc — bottom left */}
+        <div style={{ position:'sticky', bottom:12, left:28, alignSelf:'flex-start', marginTop:'auto', flexShrink:0 }}>
           <svg width={44} height={44} viewBox="0 0 44 44">
             <circle cx={22} cy={22} r={18} fill="none" stroke="rgba(255,255,255,.12)" strokeWidth={3}/>
             <circle cx={22} cy={22} r={18} fill="none" stroke="var(--primary)" strokeWidth={3}
               strokeDasharray={`${2*Math.PI*18}`}
-              strokeDashoffset={`${2*Math.PI*18*(1-phasePct/100)}`}
+              strokeDashoffset={`${2*Math.PI*18*(1 - phasePct/100)}`}
               strokeLinecap="round"
               style={{ transform:'rotate(-90deg)', transformOrigin:'22px 22px', transition:'stroke-dashoffset 1s linear' }}/>
             <text x={22} y={27} textAnchor="middle" fill="rgba(255,255,255,.7)" fontSize={12} fontFamily="monospace" fontWeight={700}>
@@ -2494,26 +2557,60 @@ function TVPlayer({ session, onClose }) {
       </div>
 
       {/* Phase progress dots */}
-      <div style={{ display:'flex', justifyContent:'center', gap:8, padding:'8px 0', background:'rgba(0,0,0,.3)' }}>
+      <div style={{ display:'flex', justifyContent:'center', gap:8, padding:'7px 0', background:'rgba(0,0,0,.4)', flexShrink:0 }}>
         {phases.map((ph, i) => (
-          <div key={i} style={{ width: i===phaseIdx?24:8, height:8, borderRadius:4, transition:'all .3s',
-            background: i < phaseIdx ? 'var(--green)' : i === phaseIdx ? 'var(--primary)' : 'rgba(255,255,255,.2)' }}/>
+          <div key={i} onClick={()=>{setPhaseIdx(i); setTimeLeft(phases[i].dur);}}
+            title={phaseLabels[ph.type]}
+            style={{ width: i===phaseIdx?24:8, height:8, borderRadius:4, transition:'all .3s', cursor:'pointer',
+              background: i < phaseIdx ? 'var(--green)' : i === phaseIdx ? 'var(--primary)' : 'rgba(255,255,255,.2)' }}/>
         ))}
       </div>
 
       {/* Controls bar */}
-      <div className="tv-controls">
-        <button className="tv-btn" onClick={retreat} title="Previous (←)">◀</button>
-        <button className="tv-btn primary" onClick={()=>setPaused(p=>!p)} title="Play/Pause (Space)" style={{ minWidth:80 }}>
+      <div className="tv-controls" style={{ gap:6 }}>
+        {/* Nav */}
+        <button className="tv-btn" onClick={retreat} title="Previous phase (← / h)">◀</button>
+        <button className="tv-btn primary" onClick={()=>setPaused(p=>!p)} title="Play/Pause (Space)" style={{ minWidth:76 }}>
           {paused ? '▶ Play' : '⏸ Pause'}
         </button>
-        <button className="tv-btn" onClick={advance} title="Next (→)">▶</button>
+        <button className="tv-btn" onClick={advance} title="Next phase (→ / l)">▶</button>
+
+        <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 4px' }}/>
+
+        {/* Fav / Done */}
+        <button className="tv-btn" onClick={toggleFav} title="Toggle Favourite (F)"
+          style={{ color: isFav ? '#f5a623' : 'rgba(255,255,255,.5)',
+                   borderColor: isFav ? '#f5a62366' : 'rgba(255,255,255,.15)',
+                   background: isFav ? 'rgba(245,166,35,.15)' : undefined }}>
+          {isFav ? '★' : '☆'} Fav
+        </button>
+        <button className="tv-btn" onClick={toggleDone} title="Toggle Done (D)"
+          style={{ color: isDone ? '#3ecf8e' : 'rgba(255,255,255,.5)',
+                   borderColor: isDone ? '#3ecf8e66' : 'rgba(255,255,255,.15)',
+                   background: isDone ? 'rgba(62,207,142,.15)' : undefined }}>
+          {isDone ? '✓' : '○'} Done
+        </button>
+
+        <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 4px' }}/>
+
+        {/* Font size */}
+        <button className="tv-btn" onClick={()=>changeFontSize(-10)} title="Smaller font (↓ / -)">A−</button>
+        <span style={{ color:'rgba(255,255,255,.45)', fontSize:11, fontFamily:'var(--mono)', minWidth:36, textAlign:'center' }}>
+          {fontSize}%
+        </span>
+        <button className="tv-btn" onClick={()=>changeFontSize(+10)} title="Larger font (↑ / =)">A+</button>
+        <button className="tv-btn" onClick={()=>setFontSize(100)} title="Reset font size (0)"
+          style={{ fontSize:10, padding:'6px 8px', color:'rgba(255,255,255,.35)' }}>reset</button>
+
         <div style={{ flex:1 }}/>
-        <div style={{ color:'rgba(255,255,255,.5)', fontSize:12, fontFamily:'var(--mono)' }}>
-          {phaseLabels[phase?.type]} · {timeLeft}s left
+
+        {/* Phase + time info */}
+        <div style={{ color:'rgba(255,255,255,.4)', fontSize:11, fontFamily:'var(--mono)' }}>
+          {phaseLabels[phase?.type]} · {timeLeft}s
         </div>
-        <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 8px' }}/>
-        <button className="tv-btn" onClick={onClose} title="Exit (Esc)" style={{ color:'rgba(255,255,255,.5)' }}>✕ Exit</button>
+
+        <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 4px' }}/>
+        <button className="tv-btn" onClick={onClose} title="Exit (Esc)" style={{ color:'rgba(255,255,255,.4)' }}>✕ Exit</button>
       </div>
     </div>
   );
@@ -4147,6 +4244,8 @@ function App() {
       />}
       {tvSession&&<TVPlayer
         session={tvSession}
+        favIds={favIds} completedIds={completedIds}
+        onToggleFav={toggleFav} onToggleDone={toggleDone}
         onClose={()=>setTvSession(null)}
       />}
       {showCollections&&(()=>{
