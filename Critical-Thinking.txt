@@ -154,6 +154,7 @@ Critical Thinking Exam 2024 MCQs	Logic is:	Positive science	Descriptive science	
 Critical Thinking Exam 2024 MCQs	Science of how to evaluate arguments and reasoning is:	Ethics	Axiology	Logic	Ontology	C	Logic	Arguments
 Critical Thinking Exam 2024 MCQs	This means thinking and good judgment.	Alternative	Analogy	Reasoning	Fallacy	C	Reasoning	Arguments
 Critical Thinking Exam 2024 MCQs	This means being sensible and reasonable.	Logical	Reasoning	Generalizing	Illogical	A	Logical	Arguments
+#separator:tab
 Critical Thinking MCQs – Set 1	Critical thinking is helpful to medical students by:	self-directed	self-believes	avoid medical error	A self-corrective thinking	C	avoid medical error	CT_Basics
 Critical Thinking MCQs – Set 1	When beliefs are based on emotions, facts alone stand:	Big chance	little chance	Moderate chance	No chance	C	Little chance	Biases
 Critical Thinking MCQs – Set 1	A person with critical thinking skills is capable of the following EXCEPT:	Having an understanding of logical connections between multiple ideas	Identify, construct, and evaluate arguments	Detect loopholes and common mistakes in reasoning	Reflect on the justification of one's own book	D	Reflect on the justification of one's own book	CT_Basics
